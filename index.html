@@ -9,10 +9,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --navy:#0A1A33; --navy-2:#0F2747; --navy-3:#16345C;
-    --blue:#1F6FEB; --blue-deep:#0B5BD3;
-    --cyan:#1FC7DE; --cyan-deep:#0FA6BC;
-    --indigo:#6C7BE0;
+    --navy:#002550; --navy-2:#003570; --navy-3:#004990;
+    --blue:#0066CC; --blue-deep:#004990;
+    --cyan:#00A3E0; --cyan-deep:#0080B8;
+    --indigo:#4A6FA5;
     --green:#1FA971; --green-soft:#E4F5EE;
     --ink:#0E1B2E; --muted:#5F718C; --faint:#93A1B5;
     --line:#E4E9F2; --line-soft:#EEF2F8;
@@ -201,6 +201,19 @@
   .dl .row dd.hidden-ext{color:var(--warn); font-style:italic; font-weight:500; display:flex; align-items:center; gap:6px; font-size:12px}
   .cust-line{display:flex; flex-wrap:wrap; gap:6px}
   .stage-select{width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:9px; font-family:inherit; font-size:13px; background:var(--card); color:var(--ink); font-weight:600}
+  .btn-edit-site{display:flex; align-items:center; gap:7px; margin:18px 0 4px; width:100%; justify-content:center; padding:10px; border:1px dashed var(--line); border-radius:10px; font-size:13px; font-weight:600; color:var(--muted); transition:.15s}
+  .btn-edit-site:hover{border-color:var(--blue); color:var(--blue); background:rgba(0,102,204,.04)}
+  .edit-form input,.edit-form select,.edit-form textarea{width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-family:inherit; font-size:13px; color:var(--ink); background:var(--card); margin-top:4px}
+  .edit-form input:focus,.edit-form select:focus,.edit-form textarea:focus{outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(0,102,204,.12)}
+  .edit-form label{display:block; font-size:11.5px; font-weight:600; color:var(--muted); margin-top:12px}
+  .edit-form label:first-child{margin-top:0}
+  .edit-form .two{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .edit-actions{display:flex; gap:10px; margin-top:16px}
+  .edit-actions .save-edit{flex:1; background:var(--blue); color:#fff; font-weight:600; font-size:13px; padding:10px; border-radius:9px; transition:.15s}
+  .edit-actions .save-edit:hover{background:var(--blue-deep)}
+  .edit-actions .cancel-edit{padding:10px 16px; border:1px solid var(--line); border-radius:9px; font-size:13px; font-weight:600; color:var(--muted)}
+  .cust-edit-row{display:grid; grid-template-columns:1fr 80px; gap:8px; margin-top:6px; align-items:center}
+  .cust-edit-row span{font-size:11px; color:var(--muted); font-weight:600; margin-top:4px; display:block}
   /* updates */
   .add-upd{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:13px}
   .add-upd textarea{width:100%; border:1px solid var(--line); border-radius:8px; padding:9px 11px; font-family:inherit; font-size:13px; resize:vertical; min-height:54px; color:var(--ink)}
@@ -256,7 +269,7 @@
 <header class="top">
   <div class="top-row">
     <div class="brand">
-      <div class="logo">Bell <b>AI Fabric</b></div>
+      <img src="Picture1.jpg" alt="Bell AI Fabric" style="height:38px; display:block;">
     </div>
     <div class="title-line">
       <h1>Data Centre Pipeline Tracker</h1>
@@ -268,7 +281,11 @@
     </button>
     <button class="btn-ghost" onclick="window.print()" title="Print or save the current view as PDF">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
-      Export
+      Print
+    </button>
+    <button class="btn-ghost" id="csv-btn" title="Download all sites as CSV for Excel">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Excel
     </button>
     <div class="mode" id="mode">
       <button data-mode="internal" class="active"><span class="pip"></span>Internal</button>
@@ -769,6 +786,11 @@ function openDrawer(id){
       ${field('Internal comments', esc(s.comments), {internalOnly:true})}
     </dl>
 
+    <button class="btn-edit-site" id="edit-site-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Edit site details
+    </button>
+
     <div class="sec-t">Update log${MODE==='external'?' (shared updates only)':''}</div>
     <div class="add-upd">
       <textarea id="upd-text" placeholder="What changed? e.g. 'Power award confirmed at 50 MW' …"></textarea>
@@ -802,6 +824,7 @@ function openDrawer(id){
   $('#drawer-close').onclick = closeDrawer;
   $('#stage-select').onchange = e => moveStage(s.id, e.target.value);
   $('#upd-save').onclick = () => saveUpdate(s.id);
+  $('#edit-site-btn').onclick = () => openEditForm(s.id);
 }
 function renderTimeline(s){
   const vis = visibleUpdates(s);
@@ -997,6 +1020,7 @@ function banner(html, kind){
   el.innerHTML = html;
 }
 function wire(){
+  $('#csv-btn').addEventListener('click', exportCSV);
   $('#mode').addEventListener('click', e=>{ const b=e.target.closest('button[data-mode]'); if(b) setMode(b.dataset.mode); });
   $('#chips').addEventListener('click', e=>{ const b=e.target.closest('button[data-stage]'); if(b){ FILTER_STAGE=b.dataset.stage; renderChips(); renderStages(); } });
   $('#search').addEventListener('input', e=>{ SEARCH=e.target.value; renderStages(); });
@@ -1009,6 +1033,104 @@ function wire(){
   $('#modal-scrim').addEventListener('click', e=>{ if(e.target.id==='modal-scrim') $('#modal-scrim').classList.remove('open'); });
   $('#modal-create').addEventListener('click', createSite);
   document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeDrawer(); $('#modal-scrim').classList.remove('open'); } });
+}
+function openEditForm(id){
+  const s = allSites().find(x=>x.id===id); if(!s) return;
+  const custs = [...s.customers]; while(custs.length<3) custs.push({n:'',mw:0});
+  const custRows = custs.slice(0,3).map((c,i)=>`
+    <div class="cust-edit-row">
+      <div><span>Customer ${i+1} name</span><input class="ef-cust-n" data-i="${i}" value="${esc(c.n||'')}" placeholder="Leave blank for TBD"></div>
+      <div><span>MW</span><input class="ef-cust-mw" data-i="${i}" type="number" step="0.1" value="${c.mw||''}" placeholder="0"></div>
+    </div>`).join('');
+  const psOpts = ['review','live','none'].map(v=>`<option value="${v}" ${s.powerState===v?'selected':''}>${v}</option>`).join('');
+  $('#edit-site-btn').insertAdjacentHTML('afterend', `
+    <div class="edit-form" id="edit-form" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px">
+      <div class="two">
+        <div><label>Site name</label><input id="ef-name" value="${esc(s.name)}"></div>
+        <div><label>Location</label><input id="ef-loc" value="${esc(s.location)}"></div>
+      </div>
+      <div class="two">
+        <div><label>Province</label><select id="ef-prov"><option>ON</option><option>BC</option><option>QC</option><option>SK</option><option>MB</option><option>AB</option><option>NS</option><option>Other</option></select></div>
+        <div><label>Gross MW</label><input id="ef-mw" type="number" step="0.1" value="${s.mw}"></div>
+      </div>
+      <label>Customers <span style="font-weight:400;font-style:italic">(up to 3)</span></label>
+      <label style="margin-top:4px"><input type="checkbox" id="ef-conf" ${s.confidential?'checked':''} style="width:auto;display:inline;margin-right:6px">Confidential (mask in External view)</label>
+      ${custRows}
+      <label>Facility type</label><input id="ef-fac" value="${esc(s.facility||'')}">
+      <label>Head lease / site status</label><input id="ef-lease" value="${esc(s.headLease||'')}">
+      <div class="two">
+        <div><label>Landlord</label><input id="ef-land" value="${esc(s.landlord||'')}"></div>
+        <div><label>Purchase option</label><input id="ef-purch" value="${esc(s.purchase||'')}"></div>
+      </div>
+      <div class="two">
+        <div><label>Target RFS</label><input id="ef-rfs" value="${esc(s.rfs||'')}"></div>
+        <div><label>Target deal exec</label><input id="ef-deal" value="${esc(s.dealExec||'')}"></div>
+      </div>
+      <label>Power status</label><input id="ef-power" value="${esc(s.power||'')}">
+      <label>Power state</label><select id="ef-pstate">${psOpts}</select>
+      <label>Internal comments</label><textarea id="ef-comments" rows="2">${esc(s.comments||'')}</textarea>
+      <div class="edit-actions">
+        <button class="cancel-edit" id="cancel-edit-btn">Cancel</button>
+        <button class="save-edit" id="save-edit-btn">Save changes</button>
+      </div>
+    </div>`);
+  $('#edit-site-btn').style.display='none';
+  // set province select value after insertion
+  $('#ef-prov').value = s.prov||'ON';
+  $('#cancel-edit-btn').onclick = ()=>{ $('#edit-form').remove(); $('#edit-site-btn').style.display=''; };
+  $('#save-edit-btn').onclick = ()=> saveEditedSite(id);
+}
+async function saveEditedSite(id){
+  const s = allSites().find(x=>x.id===id); if(!s) return;
+  if(!supabase){ toast('Not connected to the database'); return; }
+  const custNs = [...document.querySelectorAll('.ef-cust-n')].map(el=>el.value.trim());
+  const custMws = [...document.querySelectorAll('.ef-cust-mw')].map(el=>parseFloat(el.value)||0);
+  const customers = custNs.map((n,i)=>({n:n||null, mw:custMws[i]})).filter(c=>c.n||c.mw);
+  const updates = {
+    name:$('#ef-name').value.trim()||s.name,
+    location:$('#ef-loc').value.trim(),
+    prov:$('#ef-prov').value,
+    mw:parseFloat($('#ef-mw').value)||s.mw,
+    customers: customers.length ? customers : s.customers,
+    confidential:$('#ef-conf').checked,
+    facility:$('#ef-fac').value.trim(),
+    head_lease:$('#ef-lease').value.trim(),
+    landlord:$('#ef-land').value.trim(),
+    purchase:$('#ef-purch').value.trim(),
+    rfs:$('#ef-rfs').value.trim(),
+    deal_exec:$('#ef-deal').value.trim(),
+    power:$('#ef-power').value.trim(),
+    power_state:$('#ef-pstate').value,
+    comments:$('#ef-comments').value.trim(),
+  };
+  const btn = $('#save-edit-btn'); btn.disabled=true; btn.textContent='Saving…';
+  const { error } = await supabase.from('sites').update(updates).eq('id', id);
+  if(error){ console.error(error); toast('Could not save — check your connection'); btn.disabled=false; btn.textContent='Save changes'; return; }
+  Object.assign(s, { name:updates.name, location:updates.location, prov:updates.prov, mw:updates.mw,
+    customers:updates.customers, confidential:updates.confidential, facility:updates.facility,
+    headLease:updates.head_lease, landlord:updates.landlord, purchase:updates.purchase,
+    rfs:updates.rfs, dealExec:updates.deal_exec, power:updates.power, powerState:updates.power_state,
+    comments:updates.comments });
+  toast('Site updated');
+  openDrawer(id);
+  renderAll();
+}
+function exportCSV(){
+  const cols = ['Name','Location','Province','Stage','Gross MW','Customers','Allocated MW','RFS','Deal Exec','Facility','Landlord','Purchase','Lease Type','Power Status','Power State'];
+  const stageNames = {ops:'In Operations',con:'Under Construction & Contracted',near:'Near Term Execution',mid:'Mid Term / Exploratory'};
+  const rows = allSites().map(s=>{
+    const custNames = s.customers.map(c=> MODE==='external' && s.confidential ? 'Confidential' : (c.n||'TBD')).join('; ');
+    const allocMW = s.customers.reduce((a,c)=>a+(c.mw||0),0);
+    return [s.name, s.location, s.prov, stageNames[s.stage]||s.stage, s.mw, custNames, allocMW,
+            s.rfs, s.dealExec, s.facility, s.landlord, s.purchase, s.leaseType, s.power, s.powerState]
+      .map(v=> '"'+(String(v==null?'':v).replace(/"/g,'""'))+'"').join(',');
+  });
+  const csv = [cols.map(c=>'"'+c+'"').join(','), ...rows].join('\r\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = 'bell-ai-pipeline-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('CSV downloaded');
 }
 async function init(){
   $('#asof-date').textContent = new Date().toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'});
