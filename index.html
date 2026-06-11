@@ -233,7 +233,21 @@
   .tl-item .tx{font-size:13px; margin-top:2px; color:var(--ink)}
   .tl-item .meta{font-size:10.5px; color:var(--faint); margin-top:3px; display:flex; gap:8px; align-items:center}
   .tl-item .iflag{background:#FBEEDD; color:#8A5A18; font-weight:700; padding:1px 6px; border-radius:5px; font-size:10px}
+  .tl-item .author{background:#EEF3FD; color:#33508C; font-weight:600; padding:1px 6px; border-radius:5px; font-size:10px}
   .tl-empty{font-size:12.5px; color:var(--faint); font-style:italic; padding:8px 0}
+  /* author modal */
+  .author-modal{position:fixed;inset:0;background:rgba(10,20,40,.5);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .author-modal.open{display:flex}
+  .author-box{background:var(--bg);border-radius:16px;width:min(400px,94vw);padding:28px;box-shadow:var(--shadow-lg)}
+  .author-box h3{margin:0 0 6px;font-size:17px;font-weight:700}
+  .author-box p{margin:0 0 18px;font-size:13px;color:var(--muted)}
+  .author-box input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px;color:var(--ink)}
+  .author-box input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,102,204,.12)}
+  .author-box .arow{display:flex;gap:10px;margin-top:14px;justify-content:flex-end}
+  .author-box .aok{background:var(--blue);color:#fff;font-weight:600;font-size:13px;padding:10px 22px;border-radius:9px;cursor:pointer;transition:.15s}
+  .author-box .aok:hover{background:var(--blue-deep)}
+  .author-name-btn{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);color:#DDE8FA;font-size:12px;font-weight:600;padding:6px 11px;border-radius:8px;display:flex;align-items:center;gap:6px;cursor:pointer;transition:.15s}
+  .author-name-btn:hover{background:rgba(255,255,255,.18)}
   /* modal (add site) */
   .modal-scrim{position:fixed; inset:0; background:rgba(10,20,40,.5); backdrop-filter:blur(2px); display:none; align-items:center; justify-content:center; z-index:70; padding:20px}
   .modal-scrim.open{display:flex}
@@ -339,6 +353,10 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
       Print
     </button>
+    <button class="author-name-btn" id="author-name-btn" title="Change your name">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span id="author-display">Set your name</span>
+    </button>
     <button class="btn-ghost" id="exec-btn" title="Executive summary view">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
       Exec view
@@ -402,6 +420,14 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="author-modal" id="author-modal">
+  <div class="author-box">
+    <h3>What's your name?</h3>
+    <p>Your name will appear next to any changes you make — so the team knows who updated what.</p>
+    <input id="author-input" placeholder="e.g. Alina Nitu" maxlength="60">
+    <div class="arow"><button class="aok" id="author-ok">Save</button></div>
+  </div>
+</div>
 <div class="exec-scrim" id="exec-scrim">
   <div class="exec-bar">
     <img src="Picture1.jpg" alt="Bell AI Fabric">
@@ -439,6 +465,22 @@ const CONFIGURED = SUPABASE_URL.startsWith("http") && !SUPABASE_URL.includes("YO
 const supabase = CONFIGURED ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 const today = () => new Date().toISOString().slice(0,10);
+
+/* ---------- author ---------- */
+function getAuthor(){ return localStorage.getItem('pipeline_author')||''; }
+function setAuthor(name){ localStorage.setItem('pipeline_author', name); $('#author-display').textContent = name||'Set your name'; }
+function authorTag(a){ return a ? `[${a}] ` : ''; }
+function promptAuthorIfNeeded(){ if(!getAuthor()) openAuthorModal(); }
+function openAuthorModal(){
+  $('#author-input').value = getAuthor();
+  $('#author-modal').classList.add('open');
+  setTimeout(()=>$('#author-input').focus(), 80);
+}
+function closeAuthorModal(){
+  const name = $('#author-input').value.trim();
+  if(name){ setAuthor(name); }
+  $('#author-modal').classList.remove('open');
+}
 
 /* map between database rows (snake_case) and app objects (camelCase) */
 function rowToSite(r){
@@ -901,14 +943,25 @@ function openDrawer(id){
   $('#upd-save').onclick = () => saveUpdate(s.id);
   $('#edit-site-btn').onclick = () => openEditForm(s.id);
 }
+function parseAuthor(text){
+  const m = text && text.match(/^\[([^\]]+)\] /);
+  return m ? {author:m[1], text:text.slice(m[0].length)} : {author:'', text:text||''};
+}
 function renderTimeline(s){
   const vis = visibleUpdates(s);
   $('#timeline').innerHTML = vis.length
-    ? vis.map(u=>`<div class="tl-item ${u.auto?'auto':''}">
-        <div class="dt">${esc(u.date)}</div>
-        <div class="tx">${esc(redact(u.text, s))}</div>
-        <div class="meta">${u.internalOnly?'<span class="iflag">INTERNAL</span>':''}${u.auto?'<span>system</span>':''}</div>
-      </div>`).join('')
+    ? vis.map(u=>{
+        const {author, text} = parseAuthor(u.text);
+        return `<div class="tl-item ${u.auto?'auto':''}">
+          <div class="dt">${esc(u.date)}</div>
+          <div class="tx">${esc(redact(text, s))}</div>
+          <div class="meta">
+            ${author?`<span class="author">${esc(author)}</span>`:''}
+            ${u.internalOnly?'<span class="iflag">INTERNAL</span>':''}
+            ${u.auto?'<span>system</span>':''}
+          </div>
+        </div>`;
+      }).join('')
     : `<div class="tl-empty">No updates to show in this view.</div>`;
 }
 function closeDrawer(){ openSiteId=null; $('#scrim').classList.remove('open'); $('#drawer').classList.remove('open'); }
@@ -937,7 +990,7 @@ async function moveStage(id, newStage){
   if(error){ console.error(error); toast('Could not move site'); return; }
   s.stage = newStage;
   const note = { site_id:id, date:today(),
-    text:`Stage moved: ${stageById(from).name} → ${stageById(newStage).name}`, internal_only:false, auto:true };
+    text:`${authorTag(getAuthor())}Stage moved: ${stageById(from).name} → ${stageById(newStage).name}`, internal_only:false, auto:true };
   const { data } = await supabase.from('updates').insert(note).select().single();
   if(data){ (UPDATES[id]=UPDATES[id]||[]).push(rowToUpdate(data)); }
   openDrawer(id); renderAll();
@@ -957,10 +1010,15 @@ function openRecentUpdates(){
   const items = feed.length ? feed.map(u=>{
     const st = stageById(u.stage);
     const site = sites.find(x=>x.id===u.sid);
+    const {author, text:utext} = parseAuthor(u.text);
     return `<div class="tl-item ${u.auto?'auto':''}">
       <div class="dt">${esc(u.date)}</div>
-      <div class="tx"><b style="cursor:pointer;color:${st.color}" data-jump="${u.sid}">${esc(u.site)}</b> — ${esc(redact(u.text, site))}</div>
-      <div class="meta">${u.internalOnly?'<span class="iflag">INTERNAL</span>':''}${u.auto?'<span>system</span>':''}</div>
+      <div class="tx"><b style="cursor:pointer;color:${st.color}" data-jump="${u.sid}">${esc(u.site)}</b> — ${esc(redact(utext, site))}</div>
+      <div class="meta">
+        ${author?`<span class="author">${esc(author)}</span>`:''}
+        ${u.internalOnly?'<span class="iflag">INTERNAL</span>':''}
+        ${u.auto?'<span>system</span>':''}
+      </div>
     </div>`;
   }).join('') : `<div class="tl-empty">No updates yet.</div>`;
 
@@ -1025,7 +1083,7 @@ async function createSite(){
   btn.disabled = false;
   if(error){ console.error(error); toast('Could not add site \u2014 check your connection'); return; }
   UPDATES[site.id] = [];
-  const addNote = { site_id:site.id, date:today(), text:`Site added to pipeline: ${site.name} (${fmtMW(site.mw)} MW, ${stageById(site.stage).name}).`, internal_only:false, auto:true };
+  const addNote = { site_id:site.id, date:today(), text:`${authorTag(getAuthor())}Site added to pipeline: ${site.name} (${fmtMW(site.mw)} MW, ${stageById(site.stage).name}).`, internal_only:false, auto:true };
   const { data:an } = await supabase.from('updates').insert(addNote).select().single();
   if(an){ UPDATES[site.id].push(rowToUpdate(an)); }
   SITES.push(site);
@@ -1102,6 +1160,9 @@ function wire(){
   $('#exec-btn').addEventListener('click', openExecView);
   $('#exec-close').addEventListener('click', ()=>$('#exec-scrim').classList.remove('open'));
   $('#csv-btn').addEventListener('click', exportCSV);
+  $('#author-name-btn').addEventListener('click', openAuthorModal);
+  $('#author-ok').addEventListener('click', closeAuthorModal);
+  $('#author-input').addEventListener('keydown', e=>{ if(e.key==='Enter') closeAuthorModal(); });
   $('#mode').addEventListener('click', e=>{ const b=e.target.closest('button[data-mode]'); if(b) setMode(b.dataset.mode); });
   $('#chips').addEventListener('click', e=>{ const b=e.target.closest('button[data-stage]'); if(b){ FILTER_STAGE=b.dataset.stage; renderChips(); renderStages(); } });
   $('#search').addEventListener('input', e=>{ SEARCH=e.target.value; renderStages(); });
@@ -1199,7 +1260,7 @@ async function saveEditedSite(id){
   if(updates.power_state!==s.powerState) changes.push(`Power state → ${updates.power_state}`);
   if(updates.power!==s.power) changes.push(`Power → ${updates.power}`);
   if(updates.deal_exec!==s.dealExec) changes.push(`Deal exec → ${updates.deal_exec}`);
-  const noteText = changes.length ? `Site details updated: ${changes.join(' · ')}.` : 'Site details updated.';
+  const noteText = `${authorTag(getAuthor())}${changes.length ? `Site details updated: ${changes.join(' · ')}.` : 'Site details updated.'}`;
   const autoNote = { site_id:id, date:today(), text:noteText, internal_only:false, auto:true };
   const { data:nd } = await supabase.from('updates').insert(autoNote).select().single();
   if(nd){ (UPDATES[id]=UPDATES[id]||[]).push(rowToUpdate(nd)); }
@@ -1340,6 +1401,8 @@ async function init(){
   $('#asof-date').textContent = new Date().toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'});
   wire();
   setMode('internal');
+  setAuthor(getAuthor());
+  promptAuthorIfNeeded();
   if(!CONFIGURED){
     banner('<b>Almost there.</b> Open <code>index.html</code> and paste your Supabase <b>Project URL</b> and <b>anon key</b> into the two lines near the top of the script, then reload. See <code>README.md</code> for the 4 steps.', 'warn');
     return;
