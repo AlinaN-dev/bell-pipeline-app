@@ -235,6 +235,19 @@
   .tl-item .iflag{background:#FBEEDD; color:#8A5A18; font-weight:700; padding:1px 6px; border-radius:5px; font-size:10px}
   .tl-item .author{background:#EEF3FD; color:#33508C; font-weight:600; padding:1px 6px; border-radius:5px; font-size:10px}
   .tl-empty{font-size:12.5px; color:var(--faint); font-style:italic; padding:8px 0}
+  /* documents */
+  .doc-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+  .doc-item{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px}
+  .doc-item .doc-icon{color:var(--blue-deep);flex-shrink:0}
+  .doc-item .doc-name{flex:1;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .doc-item .doc-size{font-size:11px;color:var(--faint);flex-shrink:0}
+  .doc-item .doc-dl{color:var(--blue);font-size:11.5px;font-weight:600;flex-shrink:0;text-decoration:none}
+  .doc-item .doc-dl:hover{text-decoration:underline}
+  .doc-item .doc-del{color:var(--faint);font-size:11px;font-weight:600;flex-shrink:0;cursor:pointer;padding:2px 6px;border-radius:5px;transition:.15s}
+  .doc-item .doc-del:hover{background:#FBE7E7;color:#A23A3A}
+  .doc-upload-btn{display:flex;align-items:center;gap:8px;width:100%;padding:10px;border:1.5px dashed var(--line);border-radius:9px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s;background:none;justify-content:center}
+  .doc-upload-btn:hover{border-color:var(--blue);color:var(--blue);background:rgba(0,102,204,.04)}
+  .doc-uploading{font-size:12px;color:var(--muted);font-style:italic;padding:4px 0}
   /* author modal */
   .author-modal{position:fixed;inset:0;background:rgba(10,20,40,.5);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
   .author-modal.open{display:flex}
@@ -903,6 +916,14 @@ function openDrawer(id){
       ${field('Internal comments', esc(s.comments), {internalOnly:true})}
     </dl>
 
+    <div class="sec-t">Documents</div>
+    <div id="doc-list-wrap"><div class="doc-uploading">Loading…</div></div>
+    <button class="doc-upload-btn" id="doc-upload-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Attach a file
+    </button>
+    <input type="file" id="doc-file-input" style="display:none" multiple>
+
     <button class="btn-edit-site" id="edit-site-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Edit site details
@@ -942,6 +963,9 @@ function openDrawer(id){
   $('#stage-select').onchange = e => moveStage(s.id, e.target.value);
   $('#upd-save').onclick = () => saveUpdate(s.id);
   $('#edit-site-btn').onclick = () => openEditForm(s.id);
+  loadDocs(s.id);
+  $('#doc-upload-btn').onclick = () => $('#doc-file-input').click();
+  $('#doc-file-input').onchange = e => uploadDocs(s.id, e.target.files);
 }
 function parseAuthor(text){
   const m = text && text.match(/^\[([^\]]+)\] /);
@@ -1268,6 +1292,48 @@ async function saveEditedSite(id){
   openDrawer(id);
   renderAll();
 }
+function fmtBytes(b){ if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
+
+async function loadDocs(siteId){
+  const wrap = $('#doc-list-wrap'); if(!wrap) return;
+  const { data, error } = await supabase.storage.from('site-docs').list(siteId, {sortBy:{column:'created_at',order:'desc'}});
+  if(error || !data){ wrap.innerHTML = '<div class="doc-uploading">Could not load files.</div>'; return; }
+  if(!data.length){ wrap.innerHTML = '<div class="doc-uploading">No files attached yet.</div>'; return; }
+  wrap.innerHTML = `<div class="doc-list">${data.map(f=>{
+    const {data:{publicUrl}} = supabase.storage.from('site-docs').getPublicUrl(`${siteId}/${f.name}`);
+    return `<div class="doc-item">
+      <svg class="doc-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="doc-name" title="${esc(f.name)}">${esc(f.name)}</span>
+      <span class="doc-size">${fmtBytes(f.metadata?.size||0)}</span>
+      <a class="doc-dl" href="${publicUrl}" target="_blank" download>Download</a>
+      <span class="doc-del" data-path="${siteId}/${f.name}">✕</span>
+    </div>`;
+  }).join('')}</div>`;
+  wrap.querySelectorAll('.doc-del').forEach(btn=>btn.onclick=()=>deleteDoc(siteId, btn.dataset.path));
+}
+
+async function uploadDocs(siteId, files){
+  if(!files||!files.length) return;
+  const btn = $('#doc-upload-btn'); btn.textContent = 'Uploading…'; btn.disabled = true;
+  for(const file of files){
+    const path = `${siteId}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from('site-docs').upload(path, file, {upsert:false});
+    if(error){ toast('Upload failed: '+error.message); }
+  }
+  btn.textContent = 'Attach a file'; btn.disabled = false;
+  $('#doc-file-input').value = '';
+  await loadDocs(siteId);
+  toast(files.length===1 ? '1 file attached' : `${files.length} files attached`);
+}
+
+async function deleteDoc(siteId, path){
+  if(!confirm('Remove this file?')) return;
+  const { error } = await supabase.storage.from('site-docs').remove([path]);
+  if(error){ toast('Could not delete file'); return; }
+  await loadDocs(siteId);
+  toast('File removed');
+}
+
 function openExecView(){
   const sites = allSites();
   const total = sites.reduce((a,s)=>a+s.mw,0);
