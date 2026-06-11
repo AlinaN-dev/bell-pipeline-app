@@ -258,6 +258,62 @@
     header.top{padding:14px 16px}
     .title-line{order:3; width:100%; margin-top:4px}
   }
+  /* ---------- exec view overlay ---------- */
+  .exec-scrim{position:fixed;inset:0;background:#F4F7FC;z-index:80;overflow-y:auto;display:none}
+  .exec-scrim.open{display:block}
+  .exec-bar{background:linear-gradient(120deg,#002550 0%,#003570 60%,#004990 130%);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:5;box-shadow:0 4px 16px rgba(0,37,80,.22)}
+  .exec-bar img{height:32px}
+  .exec-bar .etitle{flex:1;font-size:15px;font-weight:700;letter-spacing:-.2px}
+  .exec-bar .edate{font-size:11.5px;color:#9DB2D4}
+  .exec-bar .eprint{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:9px;display:flex;align-items:center;gap:7px;cursor:pointer;transition:.15s}
+  .exec-bar .eprint:hover{background:rgba(255,255,255,.22)}
+  .exec-bar .eclose{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s}
+  .exec-bar .eclose:hover{background:rgba(255,255,255,.22)}
+  .exec-body{max-width:1280px;margin:0 auto;padding:24px 28px 60px}
+  .exec-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .exec-kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .exec-kpi .lbl{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+  .exec-kpi .val{font-size:26px;font-weight:700;letter-spacing:-.5px;margin-top:4px}
+  .exec-kpi .meta{font-size:11px;color:var(--muted);margin-top:2px}
+  .exec-section{margin-bottom:24px}
+  .exec-sh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .exec-sh .bead{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+  .exec-sh h2{font-size:13px;font-weight:700;margin:0;letter-spacing:-.1px}
+  .exec-sh .smw{font-size:12px;color:var(--muted);font-weight:600;margin-left:auto}
+  .exec-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .exec-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 13px;position:relative;overflow:hidden}
+  .exec-card .ebar{position:absolute;left:0;top:0;bottom:0;width:3px}
+  .exec-card .en{font-size:13px;font-weight:700;margin-left:7px;letter-spacing:-.1px}
+  .exec-card .el{font-size:11px;color:var(--muted);margin:1px 0 6px 7px}
+  .exec-card .emw{font-size:20px;font-weight:700;margin-left:7px;letter-spacing:-.4px}
+  .exec-card .emwu{font-size:10px;color:var(--faint);font-weight:600}
+  .exec-card .ec{font-size:10.5px;color:var(--muted);margin:3px 0 0 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .exec-card .er{font-size:10.5px;color:var(--muted);margin:2px 0 0 7px}
+  .exec-card .er b{color:var(--ink);font-weight:600}
+  .exec-divider{border:none;border-top:1px solid var(--line);margin:28px 0 20px}
+  .exec-table-wrap{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .exec-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+  .exec-table thead tr{background:#004990}
+  .exec-table thead th{color:#fff;font-weight:600;padding:10px 11px;text-align:left;font-size:11px;letter-spacing:.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .exec-table tbody tr:nth-child(even){background:#F8FAFD}
+  .exec-table tbody td{padding:9px 11px;border-bottom:1px solid var(--line-soft);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+  .exec-table tbody tr:last-child td{border-bottom:none}
+  .exec-pill{font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;display:inline-block}
+  .exec-pill.ops{background:var(--green-soft);color:#15805A}
+  .exec-pill.con{background:#EEF3FD;color:#1F4FA0}
+  .exec-pill.near{background:#E3F5FA;color:#0A6B82}
+  .exec-pill.mid{background:#EEEDFE;color:#3C3489}
+  .exec-pw{font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;display:inline-block}
+  .exec-pw.live{background:var(--green-soft);color:#15805A}
+  .exec-pw.review{background:#FBEEDD;color:#8A5A18}
+  .exec-pw.none{background:#FBE7E7;color:#A23A3A}
+  @media print{
+    .exec-bar .eprint,.exec-bar .eclose{display:none!important}
+    .exec-scrim{position:static!important}
+    .exec-bar{position:static!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .exec-table thead tr,.exec-card .ebar{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+  @media(max-width:860px){.exec-kpis{grid-template-columns:1fr 1fr}.exec-body{padding:16px 16px 40px}}
   @media print{
     header.top{position:static} .scrim,.drawer,.modal-scrim,.controls .btn-add,.mode,.btn-ghost{display:none!important}
     .card{break-inside:avoid; box-shadow:none} body{background:#fff}
@@ -282,6 +338,10 @@
     <button class="btn-ghost" onclick="window.print()" title="Print or save the current view as PDF">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
       Print
+    </button>
+    <button class="btn-ghost" id="exec-btn" title="Executive summary view">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Exec view
     </button>
     <button class="btn-ghost" id="csv-btn" title="Download all sites as CSV for Excel">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -342,6 +402,21 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="exec-scrim" id="exec-scrim">
+  <div class="exec-bar">
+    <img src="Picture1.jpg" alt="Bell AI Fabric">
+    <div class="etitle">Data Centre Pipeline — Executive Summary</div>
+    <div class="edate" id="exec-date"></div>
+    <button class="eprint" onclick="window.print()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+      Print / Save PDF
+    </button>
+    <button class="eclose" id="exec-close" aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="exec-body" id="exec-body"></div>
+</div>
 
 
 <script type="module">
@@ -1020,6 +1095,8 @@ function banner(html, kind){
   el.innerHTML = html;
 }
 function wire(){
+  $('#exec-btn').addEventListener('click', openExecView);
+  $('#exec-close').addEventListener('click', ()=>$('#exec-scrim').classList.remove('open'));
   $('#csv-btn').addEventListener('click', exportCSV);
   $('#mode').addEventListener('click', e=>{ const b=e.target.closest('button[data-mode]'); if(b) setMode(b.dataset.mode); });
   $('#chips').addEventListener('click', e=>{ const b=e.target.closest('button[data-stage]'); if(b){ FILTER_STAGE=b.dataset.stage; renderChips(); renderStages(); } });
@@ -1114,6 +1191,69 @@ async function saveEditedSite(id){
   toast('Site updated');
   openDrawer(id);
   renderAll();
+}
+function openExecView(){
+  const sites = allSites();
+  const total = sites.reduce((a,s)=>a+s.mw,0);
+  const byStage = {}; STAGES.forEach(st=>byStage[st.id]=0);
+  sites.forEach(s=>byStage[s.stage]+=s.mw);
+  const secured = byStage.ops+byStage.con;
+  const stageNames = {ops:'In Operations',con:'Under Construction & Contracted',near:'Near Term Execution',mid:'Mid Term / Exploratory'};
+  const pwLabel = {live:'Power live',review:'In review',none:'No path'};
+
+  // KPIs
+  const kpis = `<div class="exec-kpis">
+    <div class="exec-kpi"><div class="lbl">Sites tracked</div><div class="val mono">${sites.length}</div><div class="meta">${new Set(sites.map(s=>s.prov)).size} provinces</div></div>
+    <div class="exec-kpi"><div class="lbl">Total pipeline</div><div class="val mono" style="color:var(--blue-deep)">${fmtMW(total)}<span style="font-size:14px;color:var(--faint);font-weight:600"> MW</span></div><div class="meta">all stages</div></div>
+    <div class="exec-kpi"><div class="lbl">Secured (live + contracted)</div><div class="val mono" style="color:var(--green)">${fmtMW(secured)}<span style="font-size:14px;color:var(--faint);font-weight:600"> MW</span></div><div class="meta">${fmtMW(byStage.ops)} MW live today</div></div>
+    <div class="exec-kpi"><div class="lbl">vs 800 MW close target</div><div class="val mono">${Math.round(secured/TARGET_LOW*100)}<span style="font-size:14px;color:var(--faint);font-weight:600">%</span></div><div class="meta">${secured>=TARGET_LOW?'target met':fmtMW(TARGET_LOW-secured)+' MW to go'}</div></div>
+  </div>`;
+
+  // Cards by stage
+  const cardSections = STAGES.map(st=>{
+    const list = sites.filter(s=>s.stage===st.id);
+    if(!list.length) return '';
+    const mwSum = list.reduce((a,s)=>a+s.mw,0);
+    const cards = list.map(s=>{
+      const custNames = (MODE==='external'&&s.confidential) ? 'Confidential' : s.customers.map(c=>c.n||'TBD').join(', ');
+      return `<div class="exec-card">
+        <div class="ebar" style="background:${st.color}"></div>
+        <div class="en">${esc(s.name)}</div>
+        <div class="el">${esc(s.location)}</div>
+        <div class="emw mono">${fmtMW(s.mw)}<span class="emwu"> MW</span></div>
+        <div class="ec">${esc(custNames)}</div>
+        <div class="er">RFS <b>${esc((s.rfs||'TBD').split('·')[0].trim())}</b></div>
+      </div>`;
+    }).join('');
+    return `<div class="exec-section">
+      <div class="exec-sh"><span class="bead" style="background:${st.color}"></span><h2>${st.name}</h2><span class="smw">${list.length} site${list.length>1?'s':''} · ${fmtMW(mwSum)} MW</span></div>
+      <div class="exec-cards">${cards}</div>
+    </div>`;
+  }).join('');
+
+  // Detail table
+  const colW = ['16%','12%','5%','14%','6%','15%','10%','10%','12%'];
+  const thead = `<thead><tr>${['Site','Location','Prov','Stage','MW','Customers','RFS','Power state','Facility'].map((c,i)=>`<th style="width:${colW[i]}">${c}</th>`).join('')}</tr></thead>`;
+  const tbody = sites.map((s,i)=>{
+    const custNames = (MODE==='external'&&s.confidential)?'Confidential':s.customers.map(c=>c.n||'TBD').join(', ');
+    return `<tr>
+      <td title="${esc(s.name)}">${esc(s.name)}</td>
+      <td title="${esc(s.location)}">${esc(s.location)}</td>
+      <td>${esc(s.prov)}</td>
+      <td><span class="exec-pill ${s.stage}">${stageNames[s.stage]||s.stage}</span></td>
+      <td class="mono">${fmtMW(s.mw)}</td>
+      <td title="${esc(custNames)}">${esc(custNames)}</td>
+      <td title="${esc(s.rfs||'')}">${esc((s.rfs||'TBD').split('·')[0].trim())}</td>
+      <td><span class="exec-pw ${s.powerState}">${pwLabel[s.powerState]||'TBD'}</span></td>
+      <td title="${esc(s.facility||'')}">${esc(s.facility||'TBD')}</td>
+    </tr>`;
+  }).join('');
+
+  $('#exec-body').innerHTML = kpis + cardSections +
+    `<hr class="exec-divider"><div style="font-size:13px;font-weight:700;margin-bottom:12px">All sites — detailed view</div>
+    <div class="exec-table-wrap"><table class="exec-table">${thead}<tbody>${tbody}</tbody></table></div>`;
+  $('#exec-date').textContent = 'As of '+new Date().toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'});
+  $('#exec-scrim').classList.add('open');
 }
 function exportCSV(){
   const stageNames = {ops:'In Operations',con:'Under Construction & Contracted',near:'Near Term Execution',mid:'Mid Term / Exploratory'};
