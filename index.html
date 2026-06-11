@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Fabric — Pipeline Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A1A33; --navy-2:#0F2747; --navy-3:#16345C;
+    --blue:#1F6FEB; --blue-deep:#0B5BD3;
+    --cyan:#1FC7DE; --cyan-deep:#0FA6BC;
+    --indigo:#6C7BE0;
+    --green:#1FA971; --green-soft:#E4F5EE;
+    --ink:#0E1B2E; --muted:#5F718C; --faint:#93A1B5;
+    --line:#E4E9F2; --line-soft:#EEF2F8;
+    --bg:#F4F7FC; --card:#FFFFFF;
+    --warn:#E0922F;
+    --shadow:0 1px 2px rgba(10,26,51,.06),0 6px 20px rgba(10,26,51,.06);
+    --shadow-lg:0 12px 40px rgba(10,26,51,.18);
+    --r:14px; --r-sm:9px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:var(--bg); color:var(--ink);
+    -webkit-font-smoothing:antialiased; line-height:1.45;
+  }
+  .mono{font-family:'JetBrains Mono','SF Mono',Menlo,Consolas,monospace}
+  button{font-family:inherit; cursor:pointer; border:none; background:none}
+  /* ---------- Header ---------- */
+  header.top{
+    background:linear-gradient(120deg,var(--navy) 0%,var(--navy-2) 60%,var(--navy-3) 130%);
+    color:#fff; padding:18px 28px 16px;
+    position:sticky; top:0; z-index:40;
+    box-shadow:0 4px 24px rgba(10,26,51,.22);
+  }
+  .top-row{display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+  .brand{display:flex; align-items:baseline; gap:11px}
+  .brand .logo{font-weight:800; font-size:22px; letter-spacing:-.5px}
+  .brand .logo b{color:var(--cyan)}
+  .brand .sub{font-size:12px; color:#9DB2D4; font-weight:500; letter-spacing:.3px}
+  .title-line{display:flex; flex-direction:column; gap:2px; margin-right:auto}
+  h1{font-size:17px; margin:0; font-weight:700; letter-spacing:-.2px}
+  .asof{font-size:11.5px; color:#9DB2D4; font-weight:500}
+  .asof .dot{color:var(--cyan)}
+  /* mode toggle */
+  .mode{display:flex; background:rgba(255,255,255,.08); border-radius:999px; padding:3px; gap:2px}
+  .mode button{
+    color:#B7C7E2; font-size:12.5px; font-weight:600; padding:7px 15px; border-radius:999px;
+    display:flex; align-items:center; gap:7px; transition:.18s;
+  }
+  .mode button.active{background:#fff; color:var(--navy)}
+  .mode button.active.ext{background:var(--warn); color:#241300}
+  .mode .pip{width:7px; height:7px; border-radius:50%; background:currentColor; opacity:.55}
+  .mode button.active .pip{opacity:1}
+  .btn-ghost{
+    color:#cfe; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.16);
+    font-size:12.5px; font-weight:600; padding:8px 13px; border-radius:9px; color:#DDE8FA;
+    display:flex; align-items:center; gap:7px; transition:.15s;
+  }
+  .btn-ghost:hover{background:rgba(255,255,255,.16)}
+  /* ext banner */
+  .ext-banner{
+    display:none; align-items:center; gap:10px; margin-top:13px;
+    background:rgba(224,146,47,.16); border:1px solid rgba(224,146,47,.5);
+    color:#FFE2BB; font-size:12.5px; font-weight:500; padding:8px 14px; border-radius:9px;
+  }
+  body.external .ext-banner{display:flex}
+  .ext-banner b{color:#fff; font-weight:700}
+  /* ---------- KPI / capacity ---------- */
+  .wrap{max-width:1320px; margin:0 auto; padding:22px 28px 80px}
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px}
+  .kpi{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:15px 17px; box-shadow:var(--shadow)}
+  .kpi .lbl{font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.6px}
+  .kpi .val{font-size:27px; font-weight:700; margin-top:5px; letter-spacing:-.5px}
+  .kpi .val small{font-size:13px; color:var(--faint); font-weight:600; margin-left:3px}
+  .kpi .meta{font-size:11.5px; color:var(--muted); margin-top:3px}
+  .kpi.accent .val{color:var(--blue-deep)}
+  /* capacity meter */
+  .meter-card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:17px 19px 19px; box-shadow:var(--shadow); margin-bottom:22px}
+  .meter-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:13px; flex-wrap:wrap; gap:6px}
+  .meter-head .t{font-size:13.5px; font-weight:700}
+  .meter-head .t span{color:var(--muted); font-weight:500; font-size:12px}
+  .meter-head .total{font-size:12.5px; color:var(--muted)}
+  .meter-head .total b{font-size:15px; color:var(--ink)}
+  .bar{position:relative; height:34px; border-radius:8px; background:var(--line-soft); border:1px solid var(--line); margin-top:26px}
+  .bar-fill{position:absolute; inset:0; border-radius:8px; overflow:hidden; display:flex}
+  .seg{height:100%; position:relative; transition:width .5s ease}
+  .seg.s-ops{background:var(--green)}
+  .seg.s-con{background:var(--blue)}
+  .seg.s-near{background:var(--cyan)}
+  .seg.s-mid{background:var(--indigo)}
+  .marker{position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--navy); z-index:3}
+  .marker span{position:absolute; top:-17px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:700; color:var(--navy); white-space:nowrap}
+  .marker.t2 span{color:var(--blue-deep)} .marker.t2{background:var(--blue-deep)}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; margin-top:13px}
+  .legend div{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted)}
+  .legend i{width:11px; height:11px; border-radius:3px; display:inline-block}
+  .legend b{color:var(--ink); font-weight:700} .legend .mono{color:var(--ink)}
+  /* ---------- controls ---------- */
+  .controls{display:flex; gap:12px; align-items:center; margin-bottom:20px; flex-wrap:wrap}
+  .search{flex:1; min-width:220px; position:relative}
+  .search input{
+    width:100%; padding:11px 14px 11px 38px; border:1px solid var(--line); border-radius:10px;
+    font-size:13.5px; font-family:inherit; background:var(--card); color:var(--ink);
+  }
+  .search input:focus{outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(31,111,235,.13)}
+  .search svg{position:absolute; left:12px; top:11px; color:var(--faint)}
+  select.prov{padding:11px 13px; border:1px solid var(--line); border-radius:10px; font-size:13px; font-family:inherit; background:var(--card); color:var(--ink)}
+  .chips{display:flex; gap:7px; flex-wrap:wrap}
+  .chip{
+    font-size:12.5px; font-weight:600; padding:8px 13px; border-radius:999px;
+    border:1px solid var(--line); background:var(--card); color:var(--muted); transition:.15s;
+    display:flex; align-items:center; gap:7px;
+  }
+  .chip i{width:9px; height:9px; border-radius:50%}
+  .chip.on{color:#fff; border-color:transparent}
+  .chip.on.c-all{background:var(--navy)}
+  .chip.on.c-ops{background:var(--green)}
+  .chip.on.c-con{background:var(--blue)}
+  .chip.on.c-near{background:var(--cyan-deep)}
+  .chip.on.c-mid{background:var(--indigo)}
+  .chip .ct{background:var(--line-soft); color:var(--muted); border-radius:999px; padding:1px 7px; font-size:11px; font-weight:700}
+  .chip.on .ct{background:rgba(255,255,255,.25); color:#fff}
+  .btn-add{margin-left:auto; background:var(--blue); color:#fff; font-weight:600; font-size:13px; padding:11px 16px; border-radius:10px; display:flex; align-items:center; gap:7px; transition:.15s}
+  .btn-add:hover{background:var(--blue-deep)}
+  /* ---------- stage sections ---------- */
+  .stage{margin-bottom:30px}
+  .stage-head{display:flex; align-items:center; gap:12px; margin-bottom:13px}
+  .stage-head .bead{width:13px; height:13px; border-radius:4px}
+  .stage-head h2{font-size:15px; font-weight:700; margin:0; letter-spacing:-.2px}
+  .stage-head .mw{font-size:12.5px; color:var(--muted); font-weight:600}
+  .stage-head .mw b{color:var(--ink)}
+  .stage-head .rule{flex:1; height:1px; background:var(--line)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px 17px 15px;
+    box-shadow:var(--shadow); cursor:pointer; transition:.16s; position:relative; overflow:hidden;
+  }
+  .card:hover{transform:translateY(-2px); box-shadow:var(--shadow-lg); border-color:#cdd9ec}
+  .card .edge{position:absolute; left:0; top:0; bottom:0; width:4px}
+  .card.e-ops .edge{background:var(--green)} .card.e-con .edge{background:var(--blue)}
+  .card.e-near .edge{background:var(--cyan)} .card.e-mid .edge{background:var(--indigo)}
+  .card-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px}
+  .card .name{font-size:15.5px; font-weight:700; letter-spacing:-.2px}
+  .card .loc{font-size:12px; color:var(--muted); margin-top:1px}
+  .card .mw-badge{text-align:right; flex-shrink:0}
+  .card .mw-badge .n{font-size:19px; font-weight:700; color:var(--ink)}
+  .card .mw-badge .u{font-size:11px; color:var(--faint); font-weight:600; margin-top:-2px}
+  .card .cust{margin-top:11px; display:flex; flex-wrap:wrap; gap:6px}
+  .pill{font-size:11.5px; font-weight:600; padding:4px 9px; border-radius:7px; background:var(--line-soft); color:var(--ink); display:inline-flex; align-items:center; gap:5px}
+  .pill.tbd{color:var(--muted); font-style:italic}
+  .pill.conf{background:#FBEEDD; color:#8A5A18}
+  .pill .mw{color:var(--muted); font-weight:600}
+  .card .foot{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center}
+  .tag{font-size:11px; font-weight:600; padding:3px 9px; border-radius:6px; border:1px solid var(--line); color:var(--muted); display:inline-flex; align-items:center; gap:5px}
+  .tag.power{border-color:transparent}
+  .tag.power.live{background:var(--green-soft); color:#15805A}
+  .tag.power.review{background:#FBEEDD; color:#9A6516}
+  .tag.power.none{background:#FBE7E7; color:#A23A3A}
+  .tag.rfs{background:#EEF2FB; border-color:transparent; color:#33508C}
+  .card .upd{margin-top:11px; padding-top:11px; border-top:1px dashed var(--line); font-size:11.5px; color:var(--muted); display:flex; gap:7px; align-items:flex-start}
+  .card .upd .d{color:var(--blue-deep); font-weight:700; flex-shrink:0; font-family:'JetBrains Mono',monospace; font-size:11px}
+  .card .upd.none{color:var(--faint); font-style:italic; border-top-color:transparent; padding-top:8px}
+  .empty{text-align:center; padding:60px 20px; color:var(--faint)}
+  .empty svg{margin-bottom:10px}
+  /* ---------- drawer ---------- */
+  .scrim{position:fixed; inset:0; background:rgba(10,20,40,.5); backdrop-filter:blur(2px); opacity:0; pointer-events:none; transition:.22s; z-index:50}
+  .scrim.open{opacity:1; pointer-events:auto}
+  .drawer{
+    position:fixed; top:0; right:0; bottom:0; width:min(520px,94vw); background:var(--bg);
+    transform:translateX(102%); transition:transform .28s cubic-bezier(.4,0,.1,1); z-index:60;
+    display:flex; flex-direction:column; box-shadow:-12px 0 50px rgba(10,26,51,.3);
+  }
+  .drawer.open{transform:none}
+  .dh{padding:20px 22px 17px; color:#fff; position:relative}
+  .dh.d-ops{background:linear-gradient(120deg,#0d6b4b,#1FA971)}
+  .dh.d-con{background:linear-gradient(120deg,var(--navy-2),var(--blue))}
+  .dh.d-near{background:linear-gradient(120deg,#0a4a55,var(--cyan-deep))}
+  .dh.d-mid{background:linear-gradient(120deg,#33396e,var(--indigo))}
+  .dh .close{position:absolute; top:16px; right:16px; color:#fff; width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center; transition:.15s}
+  .dh .close:hover{background:rgba(255,255,255,.28)}
+  .dh .stg{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; opacity:.85}
+  .dh .nm{font-size:23px; font-weight:800; margin:3px 0 1px; letter-spacing:-.4px}
+  .dh .lc{font-size:13px; opacity:.9}
+  .dh .hmw{display:flex; gap:22px; margin-top:14px}
+  .dh .hmw div .n{font-size:21px; font-weight:700} .dh .hmw div .n small{font-size:12px; opacity:.8}
+  .dh .hmw div .l{font-size:10.5px; opacity:.8; text-transform:uppercase; letter-spacing:.5px; font-weight:600}
+  .dbody{flex:1; overflow-y:auto; padding:18px 22px 30px}
+  .sec-t{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:var(--faint); margin:20px 0 10px}
+  .sec-t:first-child{margin-top:0}
+  .dl{display:grid; grid-template-columns:1fr; gap:0; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden}
+  .dl .row{display:grid; grid-template-columns:152px 1fr; gap:10px; padding:11px 15px; border-bottom:1px solid var(--line-soft); font-size:13px}
+  .dl .row:last-child{border-bottom:none}
+  .dl .row dt{color:var(--muted); font-weight:600; font-size:12px}
+  .dl .row dd{margin:0; color:var(--ink); font-weight:500}
+  .dl .row dd.hidden-ext{color:var(--warn); font-style:italic; font-weight:500; display:flex; align-items:center; gap:6px; font-size:12px}
+  .cust-line{display:flex; flex-wrap:wrap; gap:6px}
+  .stage-select{width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:9px; font-family:inherit; font-size:13px; background:var(--card); color:var(--ink); font-weight:600}
+  /* updates */
+  .add-upd{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:13px}
+  .add-upd textarea{width:100%; border:1px solid var(--line); border-radius:8px; padding:9px 11px; font-family:inherit; font-size:13px; resize:vertical; min-height:54px; color:var(--ink)}
+  .add-upd textarea:focus{outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(31,111,235,.12)}
+  .add-upd .au-row{display:flex; gap:10px; align-items:center; margin-top:9px}
+  .add-upd input[type=date]{border:1px solid var(--line); border-radius:8px; padding:7px 9px; font-family:inherit; font-size:12.5px; color:var(--ink)}
+  .au-row label{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none}
+  .au-row .save{margin-left:auto; background:var(--blue); color:#fff; font-weight:600; font-size:12.5px; padding:8px 15px; border-radius:8px; transition:.15s}
+  .au-row .save:hover{background:var(--blue-deep)}
+  .timeline{position:relative; padding-left:20px}
+  .timeline::before{content:''; position:absolute; left:5px; top:5px; bottom:5px; width:2px; background:var(--line)}
+  .tl-item{position:relative; padding:0 0 15px}
+  .tl-item::before{content:''; position:absolute; left:-19px; top:4px; width:10px; height:10px; border-radius:50%; background:var(--blue); border:2px solid var(--bg); box-shadow:0 0 0 2px var(--blue)}
+  .tl-item.auto::before{background:var(--faint); box-shadow:0 0 0 2px var(--faint)}
+  .tl-item .dt{font-size:11px; font-weight:700; color:var(--blue-deep); font-family:'JetBrains Mono',monospace}
+  .tl-item.auto .dt{color:var(--muted)}
+  .tl-item .tx{font-size:13px; margin-top:2px; color:var(--ink)}
+  .tl-item .meta{font-size:10.5px; color:var(--faint); margin-top:3px; display:flex; gap:8px; align-items:center}
+  .tl-item .iflag{background:#FBEEDD; color:#8A5A18; font-weight:700; padding:1px 6px; border-radius:5px; font-size:10px}
+  .tl-empty{font-size:12.5px; color:var(--faint); font-style:italic; padding:8px 0}
+  /* modal (add site) */
+  .modal-scrim{position:fixed; inset:0; background:rgba(10,20,40,.5); backdrop-filter:blur(2px); display:none; align-items:center; justify-content:center; z-index:70; padding:20px}
+  .modal-scrim.open{display:flex}
+  .modal{background:var(--bg); border-radius:16px; width:min(560px,96vw); max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg)}
+  .modal h3{margin:0; padding:18px 22px; border-bottom:1px solid var(--line); font-size:16px; background:var(--card); border-radius:16px 16px 0 0; position:sticky; top:0}
+  .mf{padding:18px 22px}
+  .mf label{display:block; font-size:12px; font-weight:600; color:var(--muted); margin:13px 0 5px}
+  .mf label:first-child{margin-top:0}
+  .mf input,.mf select,.mf textarea{width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:9px; font-family:inherit; font-size:13px; color:var(--ink)}
+  .mf input:focus,.mf select:focus,.mf textarea:focus{outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(31,111,235,.12)}
+  .mf .two{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .mf-actions{display:flex; gap:10px; padding:16px 22px; border-top:1px solid var(--line); background:var(--card); position:sticky; bottom:0; border-radius:0 0 16px 16px}
+  .mf-actions .cancel{color:var(--muted); font-weight:600; font-size:13px; padding:10px 16px; border-radius:9px; border:1px solid var(--line); background:var(--card)}
+  .mf-actions .create{margin-left:auto; background:var(--blue); color:#fff; font-weight:600; font-size:13px; padding:10px 20px; border-radius:9px}
+  .added-tag{display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; color:var(--blue-deep); background:#EEF3FD; padding:2px 7px; border-radius:5px; margin-left:8px; vertical-align:middle}
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--navy); color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:500; box-shadow:var(--shadow-lg); opacity:0; pointer-events:none; transition:.25s; z-index:90}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  /* responsive */
+  @media(max-width:860px){
+    .kpis{grid-template-columns:1fr 1fr}
+    .wrap{padding:18px 16px 70px}
+    header.top{padding:14px 16px}
+    .title-line{order:3; width:100%; margin-top:4px}
+  }
+  @media print{
+    header.top{position:static} .scrim,.drawer,.modal-scrim,.controls .btn-add,.mode,.btn-ghost{display:none!important}
+    .card{break-inside:avoid; box-shadow:none} body{background:#fff}
+  }
+</style>
+</head>
+<body class="internal">
+
+<header class="top">
+  <div class="top-row">
+    <div class="brand">
+      <div class="logo">Bell <b>AI Fabric</b></div>
+    </div>
+    <div class="title-line">
+      <h1>Data Centre Pipeline Tracker</h1>
+      <div class="asof"><span class="dot">●</span> Live document · as of <span id="asof-date"></span></div>
+    </div>
+    <button class="btn-ghost" id="updates-btn" title="Recent updates across all sites">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      Recent updates
+    </button>
+    <button class="btn-ghost" onclick="window.print()" title="Print or save the current view as PDF">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+      Export
+    </button>
+    <div class="mode" id="mode">
+      <button data-mode="internal" class="active"><span class="pip"></span>Internal</button>
+      <button data-mode="external"><span class="pip"></span>External</button>
+    </div>
+  </div>
+  <div class="ext-banner">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+    <span><b>External view</b> — customer names, internal comments, and sensitive notes are hidden. Safe to share with partners and prospects.</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="meter-card">
+    <div class="meter-head">
+      <div class="t">Capacity by funnel stage <span>· toward the 800 MW – 1.5 GW close target (2028)</span></div>
+      <div class="total">Total pipeline&nbsp; <b class="mono" id="meter-total">—</b></div>
+    </div>
+    <div class="bar" id="bar"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="controls">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" placeholder="Search sites, locations, landlords…">
+    </div>
+    <select class="prov" id="prov"><option value="">All provinces</option></select>
+    <div class="chips" id="chips"></div>
+    <button class="btn-add" id="add-site-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+      Add site
+    </button>
+  </div>
+
+  <div id="stages"></div>
+</div>
+
+<!-- drawer -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer"></aside>
+
+<!-- add site modal -->
+<div class="modal-scrim" id="modal-scrim">
+  <div class="modal">
+    <h3 id="modal-title">Add a site</h3>
+    <div class="mf" id="mf"></div>
+    <div class="mf-actions">
+      <button class="cancel" id="modal-cancel">Cancel</button>
+      <button class="create" id="modal-create">Add to pipeline</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+/* =========================================================================
+   SUPABASE CONNECTION
+   ---------------------------------------------------------------------
+   Paste your project's two values between the quotes below.
+   Find them in Supabase: Project Settings -> API
+     - Project URL      -> SUPABASE_URL
+     - anon public key  -> SUPABASE_ANON_KEY
+   ========================================================================= */
+const SUPABASE_URL      = "https://rsdifaagsbvtksvyxaoo.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_0Qpbggp6MAtuOeUiMvhseg_Hk5Sops4";
+/* ===================== (nothing to edit below) ====================== */
+
+const CONFIGURED = SUPABASE_URL.startsWith("http") && !SUPABASE_URL.includes("YOUR_")
+                && !!SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.includes("YOUR_");
+const supabase = CONFIGURED ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+const today = () => new Date().toISOString().slice(0,10);
+
+/* map between database rows (snake_case) and app objects (camelCase) */
+function rowToSite(r){
+  return { id:r.id, stage:r.stage, name:r.name, location:r.location, prov:r.prov,
+    mw:Number(r.mw)||0, mwLabel:r.mw_label||undefined, customers:r.customers||[],
+    confidential:!!r.confidential, facility:r.facility, headLease:r.head_lease,
+    landlord:r.landlord, purchase:r.purchase, leaseTerms:r.lease_terms, leaseType:r.lease_type,
+    rfs:r.rfs, dealExec:r.deal_exec, power:r.power, powerState:r.power_state,
+    comments:r.comments, custom:!!r.custom, sort:(r.sort==null?500:r.sort) };
+}
+function siteToRow(s){
+  return { id:s.id, stage:s.stage, name:s.name, location:s.location, prov:s.prov,
+    mw:s.mw, mw_label:s.mwLabel||null, customers:s.customers, confidential:!!s.confidential,
+    facility:s.facility, head_lease:s.headLease, landlord:s.landlord, purchase:s.purchase,
+    lease_terms:s.leaseTerms, lease_type:s.leaseType, rfs:s.rfs, deal_exec:s.dealExec,
+    power:s.power, power_state:s.powerState, comments:s.comments,
+    custom:(s.custom===true), sort:(s.sort==null?500:s.sort) };
+}
+function rowToUpdate(r){ return { id:r.id, date:r.date, text:r.text, internalOnly:!!r.internal_only, auto:!!r.auto }; }
+
+/* =========================================================================
+   STAGE DEFINITIONS  (the funnel)
+   ========================================================================= */
+const STAGES = [
+  {id:'ops',  name:'In Operations',                  short:'Live',        color:'var(--green)',  key:'s-ops',  card:'e-ops', dh:'d-ops', chip:'c-ops'},
+  {id:'con',  name:'Under Construction & Contracted', short:'Contracted',  color:'var(--blue)',   key:'s-con',  card:'e-con', dh:'d-con', chip:'c-con'},
+  {id:'near', name:'Near Term Execution',             short:'Near term',   color:'var(--cyan)',   key:'s-near', card:'e-near',dh:'d-near',chip:'c-near'},
+  {id:'mid',  name:'Mid Term / Exploratory',          short:'Exploratory', color:'var(--indigo)', key:'s-mid',  card:'e-mid', dh:'d-mid', chip:'c-mid'},
+];
+const stageById = id => STAGES.find(s=>s.id===id);
+
+/* =========================================================================
+   SEED DATA  — transcribed from MASTER_DC_Pipeline (June 2026)
+   confidential:true  => customer names masked in External view
+   comments           => internal-only field
+   updates[].internalOnly => hidden in External view
+   ========================================================================= */
+const SEED = [
+  { id:'mission-flats', stage:'ops', name:'Mission Flats', location:'Kamloops, BC', prov:'BC', mw:6.5,
+    customers:[{n:'Groq',mw:6.5}], confidential:true,
+    facility:'Leased Powered Shell; Custom Built for Bell', headLease:'Head Lease Executed', landlord:'True North',
+    purchase:'No', leaseTerms:'TBU', leaseType:'Finance', rfs:'LIVE', dealExec:'Q4 2024', power:'LIVE', powerState:'live',
+    comments:'—',
+    updates:[{date:'2026-06-02', text:'Confirmed steady-state operations; no open items.', internalOnly:false}] },
+
+  { id:'merritt-1', stage:'ops', name:'Merritt 1', location:'Merritt, BC', prov:'BC', mw:7.9,
+    customers:[{n:'Buzz',mw:6.6},{n:'Global Relay',mw:1.3}], confidential:true,
+    facility:'Leased Powered Shell; Custom Built for Bell', headLease:'Head Lease Executed', landlord:'True North',
+    purchase:'No', leaseTerms:'TBU', leaseType:'Finance', rfs:'Buzz: LIVE · Global Relay: Q3 2026',
+    dealExec:'Buzz: Q2 2026 · Global Relay: Operating', power:'LIVE', powerState:'live',
+    comments:'—',
+    updates:[{date:'2026-05-28', text:'Global Relay (1.3 MW) targeting Q3 2026 RFS; fit-out on schedule.', internalOnly:false}] },
+
+  { id:'winnipeg-1', stage:'con', name:'Winnipeg 1', location:'Winnipeg, MB', prov:'MB', mw:14.3,
+    customers:[{n:'Buzz',mw:1.3},{n:'Cerebras',mw:13}], confidential:true,
+    facility:'Leased Powered Shell; Existing Food Manufacturing Plant Converted', headLease:'Head Lease Executed',
+    landlord:'10228668 Manitoba Limited', purchase:'No', leaseTerms:'TBU', leaseType:'Operating',
+    rfs:'LIVE / Aug 2026', dealExec:'Buzz: Q1 2026 · Cerebras: Q1 2026',
+    power:'Hydro power connected / gas generation under construction — 5.4 MW live + add\'l with gas', powerState:'review',
+    comments:'Cerebras delivery may slip past Aug 2026 due to gas generator supply-chain / permits. Exploring Buzz application to secure +3 MW on a separate power meter.',
+    updates:[{date:'2026-06-05', text:'Gas generation install underway to lift beyond 5.4 MW; watching supply-chain risk on generators.', internalOnly:true}] },
+
+  { id:'sherwood-1', stage:'con', name:'Sherwood 1', location:'Regina, SK', prov:'SK', mw:300,
+    customers:[{n:'Cerebras',mw:160},{n:'CoreWeave',mw:140}], confidential:true,
+    facility:'Fully Owned (land & buildings); Greenfield / New Build', headLease:'No Lease', landlord:'Bell',
+    purchase:'Bell Owned', leaseTerms:'N/A', leaseType:'Operating', rfs:'Q2 2027 (Bldg 1) · Q3 2027 (Bldg 4)',
+    dealExec:'Q1 2026', power:'Power secured; upgrade in progress. Temporary (gas) power TBD; permanent power TBD', powerState:'review',
+    comments:'Flagship owned greenfield. Temporary gas power start date TBD; permanent power start date TBD.',
+    updates:[{date:'2026-06-08', text:'Building 1 RFS holding at Q2 2027; power upgrade sequencing in progress.', internalOnly:false}] },
+
+  { id:'merritt-2', stage:'con', name:'Merritt 2', location:'Merritt, BC', prov:'BC', mw:8.6,
+    customers:[{n:'Buzz',mw:6.5},{n:null,mw:2.1}], confidential:true,
+    facility:'Leased Powered Shell; Custom Built for Bell', headLease:'Site Secured (head lease signed)',
+    landlord:'True North', purchase:'No', leaseTerms:'TBU', leaseType:'Operating', rfs:'Q1 2027', dealExec:'Q2 2026',
+    power:'Power secured, upgrade in progress — Q4 2026', powerState:'review',
+    comments:'2.1 MW remaining unallocated (customer TBD).',
+    updates:[{date:'2026-05-30', text:'Power upgrade tracking to Q4 2026; 2.1 MW still to be matched to a customer.', internalOnly:true}] },
+
+  { id:'hillside-tru', stage:'con', name:'Hillside TRU 1 & 2', location:'Kamloops, BC', prov:'BC', mw:26, mwLabel:'26 MW (13 + 13)',
+    customers:[{n:'Together AI',mw:19.5},{n:'SFU',mw:6.5}], confidential:true,
+    facility:'Leased Powered Shell; Custom Built for Bell', headLease:'Head Lease Executed; Under Construction',
+    landlord:'True North', purchase:'No', leaseTerms:'TBU', leaseType:'Operating',
+    rfs:'Ph 1: Q2 2027 · Ph 2: Q3 2027', dealExec:'Ph 1: Q3 2026 · Ph 2: TBD',
+    power:'Power secured; upgrade in progress — date TBD', powerState:'review',
+    comments:'Two phases of ~13 MW each.',
+    updates:[{date:'2026-06-03', text:'Phase 1 deal execution targeting Q3 2026; Phase 2 timing still open.', internalOnly:false}] },
+
+  { id:'boychuk-1', stage:'near', name:'Boychuk 1', location:'Cambridge, ON', prov:'ON', mw:26,
+    customers:[{n:'Cerebras',mw:10},{n:'Baseten',mw:16}], confidential:true,
+    facility:'Lease w/ Option to Own Powered Shell; Existing Building Retrofitted', headLease:'Lease & Purchase Option Under Negotiation',
+    landlord:'Intermarket', purchase:'Yes', leaseTerms:'TBC', leaseType:'Operating', rfs:'Ph 1: Q1 2027 · Ph 2: Q4 2028',
+    dealExec:'Q3 2026', power:'Under review with GrandBridge Energy — Ph 1: Q1 2027, Ph 2: Q4 2028', powerState:'review',
+    comments:'Purchase option exercisable once facility is fully energized. Cerebras pricing being negotiated (outstanding capacity).',
+    updates:[{date:'2026-06-06', text:'Lease + purchase-option terms in active negotiation with landlord.', internalOnly:true}] },
+
+  { id:'sherwood-2', stage:'near', name:'Sherwood 2 (DH 5 & 6)', location:'Regina, SK', prov:'SK', mw:170,
+    customers:[{n:'Cerebras w. AWS',mw:170}], confidential:true,
+    facility:'Fully Owned (land & buildings); Greenfield / New Build', headLease:'No Lease', landlord:'Bell',
+    purchase:'Bell Owned', leaseTerms:'N/A', leaseType:'Operating', rfs:'Q2 2028', dealExec:'Q3 2026',
+    power:'Discussions underway; not secured', powerState:'review',
+    comments:'Active discussions with gas-generation partners; partnership strategy in progress.',
+    updates:[{date:'2026-06-04', text:'Gas-generation partnership strategy advancing; power not yet secured.', internalOnly:true}] },
+
+  { id:'powell-river', stage:'near', name:'Powell River', location:'Powell River, BC', prov:'BC', mw:100,
+    customers:[{n:'CoreWeave / Anthropic / NVIDIA',mw:100,prospect:true}], confidential:true,
+    facility:'Leased Indigenous Land; Greenfield / New Build', headLease:'Site negotiations in progress',
+    landlord:'Tla\u02bcamin Nation', purchase:'No', leaseTerms:'TBC', leaseType:'Operating', rfs:'Q1 2028', dealExec:'Q3 2026',
+    power:'Power application under review with BC Hydro — Q1 2028', powerState:'review',
+    comments:'Customer is a shortlist of prospects, not yet committed.',
+    updates:[{date:'2026-05-26', text:'Site negotiations with Tla\u02bcamin Nation ongoing.', internalOnly:false}] },
+
+  { id:'barrie', stage:'mid', name:'Barrie', location:'Barrie, ON', prov:'ON', mw:130,
+    customers:[{n:'CoreWeave / Anthropic / NVIDIA',mw:130,prospect:true}], confidential:true,
+    facility:'Fully Owned Land; Greenfield / New Build', headLease:'No Lease', landlord:'Bell',
+    purchase:'Bell Owned', leaseTerms:'N/A', leaseType:'Operating', rfs:'30 MW: H2 2026 · 100 MW: TBD', dealExec:'TBD',
+    power:'Applications: 10 MW submitted, +20 MW to submit Jun 12, +100 MW Q3/4 2026 — H2 2026', powerState:'review',
+    comments:'CEO met with Mayor Jun 10 to expedite the site. Prospect customers only.',
+    updates:[{date:'2026-06-10', text:'Executive met with Mayor to expedite approvals; +20 MW application due Jun 12.', internalOnly:true}] },
+
+  { id:'royal-windsor', stage:'mid', name:'Royal Windsor', location:'Mississauga, ON', prov:'ON', mw:135,
+    customers:[{n:null,mw:135}], confidential:false,
+    facility:'Powered Shell; Existing Building to be Converted', headLease:'Entering site negotiations for purchase',
+    landlord:'Moldenhauer', purchase:'Yes', leaseTerms:'N/A', leaseType:'Operating', rfs:'12 MW: Q1 2028', dealExec:'TBD',
+    power:'12 MW committed (0 live); load/power study for +30 MW (Q4 2028) and +93 MW (TBD)', powerState:'review',
+    comments:'Closing condition tied to securing 42 MW of power.',
+    updates:[{date:'2026-05-22', text:'Power study underway; deal contingent on 42 MW secured.', internalOnly:false}] },
+
+  { id:'danforth', stage:'mid', name:'Danforth', location:'Scarborough, ON', prov:'ON', mw:63.7,
+    customers:[{n:null,mw:63.7}], confidential:false,
+    facility:'Ph 1: 23.4 MW Greenfield · Ph 2: 40.3 MW Greenfield', headLease:'Entering site negotiations for purchase',
+    landlord:'Stack Infrastructure', purchase:'Yes', leaseTerms:'N/A', leaseType:'Operating',
+    rfs:'Ph 1: Q1/2 2028 · Ph 2: Q3/4 2028', dealExec:'TBD',
+    power:'23.4 MW committed (live today); Ph 2 power study in progress — Q4 2028', powerState:'review',
+    comments:'—',
+    updates:[{date:'2026-05-20', text:'Phase 1 power (23.4 MW) live; purchase negotiations opening.', internalOnly:false}] },
+
+  { id:'lougheed', stage:'mid', name:'Lougheed', location:'Vancouver, BC', prov:'BC', mw:13,
+    customers:[{n:'Together AI (backup)',mw:13}], confidential:true,
+    facility:'Powered Shell', headLease:'Entering site negotiations', landlord:'True North',
+    purchase:'No', leaseTerms:'TBU', leaseType:'Operating', rfs:'Q2/Q3 2027', dealExec:'Q3 2026',
+    power:'Under review with TR Hydro — Q4 2026', powerState:'review', comments:'Together AI backup capacity.',
+    updates:[{date:'2026-05-18', text:'Site negotiations opening; power review with TR Hydro.', internalOnly:false}] },
+
+  { id:'trenton', stage:'mid', name:'Trenton', location:'Trenton, ON', prov:'ON', mw:17,
+    customers:[{n:null,mw:17}], confidential:false,
+    facility:'Powered Shell', headLease:'Agreements to be finalized post DD closure', landlord:'First Block',
+    purchase:'Yes', leaseTerms:'N/A', leaseType:'Operating', rfs:'Q2 2027', dealExec:'Q3 2026',
+    power:'Power connected — 17 MW live', powerState:'live',
+    comments:'Permit package submitted May 29; confirm feasibility after survey results (mid-July).',
+    updates:[{date:'2026-05-29', text:'Permit package submitted; feasibility confirmation expected mid-July.', internalOnly:false}] },
+
+  { id:'merritt-3', stage:'mid', name:'Merritt 3', location:'Merritt, BC', prov:'BC', mw:9.9,
+    customers:[{n:null,mw:9.9}], confidential:false,
+    facility:'Powered Shell', headLease:'Head lease already available — possible for additional power', landlord:'True North',
+    purchase:'No', leaseTerms:'TBU', leaseType:'Operating', rfs:'Q4 2028', dealExec:'TBD',
+    power:'No immediate path to grid power — Q4 2028', powerState:'none', comments:'Contingent on power update.',
+    updates:[{date:'2026-05-15', text:'Held pending a viable power path.', internalOnly:false}] },
+
+  { id:'iber', stage:'mid', name:'Iber', location:'Ottawa, ON', prov:'ON', mw:15,
+    customers:[{n:null,mw:15}], confidential:false,
+    facility:'Re-development (construction not started)', headLease:'Bell Owned Land', landlord:'Bell',
+    purchase:'Bell Owned', leaseTerms:'N/A', leaseType:'Operating', rfs:'Q2 2028', dealExec:'TBD',
+    power:'5 MW committed; power study in progress (remaining)', powerState:'review', comments:'Awaiting power response.',
+    updates:[{date:'2026-05-12', text:'5 MW committed; study underway for remaining capacity.', internalOnly:false}] },
+
+  { id:'shawinigan', stage:'mid', name:'Shawinigan (JA Foucher)', location:'Shawinigan, QC', prov:'QC', mw:100,
+    customers:[{n:null,mw:100}], confidential:false,
+    facility:'Greenfield', headLease:'City-owned land, open for purchase', landlord:'City of Shawinigan',
+    purchase:'Yes', leaseTerms:'TBD', leaseType:'Operating', rfs:'14–18 months post-execution', dealExec:'TBD',
+    power:'Under review with Hydro-Québec', powerState:'review',
+    comments:'Awaiting power response; likely awarded ~50 MW near term.',
+    updates:[{date:'2026-05-24', text:'Hydro-Québec review ongoing; ~50 MW near-term award expected.', internalOnly:true}] },
+
+  { id:'northvolt', stage:'mid', name:'Northvolt', location:'Saint-Basile, QC', prov:'QC', mw:300,
+    customers:[{n:null,mw:300}], confidential:false,
+    facility:'Greenfield', headLease:'Potential co-bid Bell / HQ', landlord:'Government of Quebec',
+    purchase:'Yes', leaseTerms:'TBD', leaseType:'Operating', rfs:'14–18 months post-execution', dealExec:'TBD',
+    power:'Under review with Hydro-Québec', powerState:'review', comments:'Meeting with Hydro-Québec week of June 12.',
+    updates:[{date:'2026-06-09', text:'HQ meeting set for week of June 12 on co-bid structure.', internalOnly:true}] },
+
+  { id:'unib', stage:'mid', name:'UNIB', location:'Upper Nicola, BC', prov:'BC', mw:145, mwLabel:'145 MW (Bell) + 145 MW (iTel)',
+    customers:[{n:'NVIDIA',mw:145}], confidential:true,
+    facility:'Greenfield', headLease:'LOI signed', landlord:'Upper Nicola Band',
+    purchase:'No', leaseTerms:'TBC', leaseType:'Operating', rfs:'TBD', dealExec:'TBD',
+    power:'Under review with BC Hydro', powerState:'review',
+    comments:'Two power applications underway — 145 MW for Bell and 145 MW for iTel.',
+    updates:[{date:'2026-05-27', text:'LOI signed; dual 145 MW power applications submitted to BC Hydro.', internalOnly:false}] },
+
+  { id:'campbell-river', stage:'mid', name:'Campbell River', location:'Campbell River, BC', prov:'BC', mw:38,
+    customers:[{n:'NVIDIA or CoreWeave',mw:38,prospect:true}], confidential:true,
+    facility:'Brownfield', headLease:'Entering site negotiations for purchase', landlord:'NTE Discovery Park',
+    purchase:'Yes', leaseTerms:'N/A', leaseType:'Operating', rfs:'Q1 2028', dealExec:'Q3 2026',
+    power:'Under review with BC Hydro — Q1 2027', powerState:'review',
+    comments:'Negotiations ongoing; purchase price currently above willingness to pay.',
+    updates:[{date:'2026-06-01', text:'Purchase price gap remains; negotiations continuing.', internalOnly:true}] },
+
+  { id:'google-x3', stage:'mid', name:'Google x3 Cluster', location:'GTA, ON', prov:'ON', mw:24.4,
+    customers:[{n:'Google',mw:23.4},{n:'SAP',mw:1}], confidential:true,
+    facility:'TBD', headLease:'TBD', landlord:'TBD', purchase:'TBD', leaseTerms:'TBD', leaseType:'Operating',
+    rfs:'Q1 2028', dealExec:'Q3 2026', power:'TBD', powerState:'review', comments:'Sites under review with Google team.',
+    updates:[{date:'2026-05-19', text:'Three-site cluster under joint review with the customer team.', internalOnly:true}] },
+
+  { id:'queens', stage:'mid', name:'Queens 1 & 2', location:'Kingston, ON', prov:'ON', mw:85,
+    customers:[{n:'Queens',mw:85}], confidential:true,
+    facility:'Re-development (construction not started)', headLease:'MOU signed with Queens\u2019 University',
+    landlord:'Queens\u2019 University', purchase:'No', leaseTerms:'10 yrs', leaseType:'Operating',
+    rfs:'Ph 1: Q2 2028 · Ph 2: Q2 2029', dealExec:'Q4 2026',
+    power:'25 MW committed; power study in progress (remaining)', powerState:'review',
+    comments:'SCIP application submitted Jun 1; outcome expected end of summer. Split 25 MW / 60 MW.',
+    updates:[{date:'2026-06-01', text:'SCIP application submitted; decision expected end of summer.', internalOnly:false}] },
+];
+
+/* =========================================================================
+   STATE
+   ========================================================================= */
+let MODE = 'internal';
+let FILTER_STAGE = 'all';
+let SEARCH = '';
+let PROV = '';
+let SITES = [];            // live site objects loaded from the database
+let UPDATES = {};          // {siteId:[update,...]} loaded from the database
+let openSiteId = null;
+
+const TARGET_LOW = 800, TARGET_HIGH = 1500;
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtMW = n => (Number.isInteger(n)? n : n.toFixed(1));
+function allSites(){ return SITES; }
+function siteUpdates(s){
+  return (UPDATES[s.id]||[]).slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+}
+function visibleUpdates(s){ return siteUpdates(s).filter(u=> MODE==='internal' || !u.internalOnly); }
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
+
+/* scrub confidential customer names out of free-text fields in external view */
+function redact(str, s){
+  if(MODE==='internal' || !s || !s.confidential || !str) return str;
+  let out = String(str);
+  (s.customers||[]).forEach(c=>{ if(c.n){ out = out.split(c.n).join('Customer'); } });
+  return out;
+}
+
+/* customer rendering with redaction */
+function custPills(s){
+  return s.customers.map(c=>{
+    if(MODE==='external' && s.confidential){
+      const label = c.prospect ? 'Prospect (confidential)' : 'Confidential';
+      return `<span class="pill conf">🔒 ${label}${c.mw?` <span class="mw">${fmtMW(c.mw)} MW</span>`:''}</span>`;
+    }
+    if(c.n==null) return `<span class="pill tbd">TBD${c.mw?` <span class="mw">${fmtMW(c.mw)} MW</span>`:''}</span>`;
+    return `<span class="pill">${esc(c.n)}${c.mw?` <span class="mw">${fmtMW(c.mw)} MW</span>`:''}</span>`;
+  }).join('');
+}
+
+/* =========================================================================
+   RENDER: KPIs + capacity meter
+   ========================================================================= */
+function renderKpis(){
+  const sites = allSites();
+  const total = sites.reduce((a,s)=>a+s.mw,0);
+  const byStage = {}; STAGES.forEach(st=> byStage[st.id]=0);
+  sites.forEach(s=> byStage[s.stage]+=s.mw);
+  const secured = byStage.ops + byStage.con;
+  const liveMW = byStage.ops;
+
+  $('#kpis').innerHTML = `
+    <div class="kpi"><div class="lbl">Sites tracked</div><div class="val mono">${sites.length}</div><div class="meta">${STAGES.map(st=>`${sites.filter(x=>x.stage===st.id).length} ${st.short.toLowerCase()}`).join(' · ')}</div></div>
+    <div class="kpi accent"><div class="lbl">Total pipeline</div><div class="val mono">${fmtMW(total)}<small>MW</small></div><div class="meta">across ${new Set(sites.map(s=>s.prov)).size} provinces</div></div>
+    <div class="kpi"><div class="lbl">Secured (live + contracted)</div><div class="val mono" style="color:var(--green)">${fmtMW(secured)}<small>MW</small></div><div class="meta">${fmtMW(liveMW)} MW live today</div></div>
+    <div class="kpi"><div class="lbl">vs 800 MW close target</div><div class="val mono">${Math.round(secured/TARGET_LOW*100)}<small>%</small></div><div class="meta">${secured>=TARGET_LOW?'target met':`${fmtMW(TARGET_LOW-secured)} MW to go`} · stretch 1.5 GW</div></div>`;
+
+  // capacity bar (stacked by stage), scaled to max(total, TARGET_HIGH)
+  const scale = Math.max(total, TARGET_HIGH);
+  $('#meter-total').textContent = fmtMW(total)+' MW';
+  $('#bar').innerHTML =
+    `<div class="bar-fill">` +
+    STAGES.map(st=>{
+      const w = byStage[st.id]/scale*100;
+      return w>0 ? `<div class="seg ${st.key}" style="width:${w}%" title="${st.name}: ${fmtMW(byStage[st.id])} MW"></div>`:'';
+    }).join('') +
+    `</div>` +
+    `<div class="marker" style="left:${TARGET_LOW/scale*100}%"><span>800 MW</span></div>`+
+    `<div class="marker t2" style="left:${TARGET_HIGH/scale*100}%"><span>1.5 GW</span></div>`;
+  $('#legend').innerHTML = STAGES.map(st=>
+    `<div><i style="background:${st.color}"></i>${st.name} <b class="mono">${fmtMW(byStage[st.id])} MW</b></div>`
+  ).join('');
+}
+
+/* =========================================================================
+   RENDER: stage chips + province filter
+   ========================================================================= */
+function renderChips(){
+  const sites = allSites();
+  const counts = {all:sites.length}; STAGES.forEach(st=>counts[st.id]=sites.filter(s=>s.stage===st.id).length);
+  const chips = [{id:'all',name:'All',chip:'c-all'}, ...STAGES];
+  $('#chips').innerHTML = chips.map(c=>{
+    const on = FILTER_STAGE===c.id;
+    const dot = c.id==='all' ? '' : `<i style="background:${stageById(c.id).color}"></i>`;
+    return `<button class="chip ${on?'on '+c.chip:''}" data-stage="${c.id}">${dot}${c.id==='all'?'All sites':c.short}<span class="ct">${counts[c.id]}</span></button>`;
+  }).join('');
+  // provinces
+  const provs = [...new Set(sites.map(s=>s.prov))].sort();
+  const sel = $('#prov'); const cur = PROV;
+  sel.innerHTML = '<option value="">All provinces</option>'+provs.map(p=>`<option value="${p}" ${p===cur?'selected':''}>${p}</option>`).join('');
+}
+
+/* =========================================================================
+   RENDER: stage sections + cards
+   ========================================================================= */
+function passesFilter(s){
+  if(FILTER_STAGE!=='all' && s.stage!==FILTER_STAGE) return false;
+  if(PROV && s.prov!==PROV) return false;
+  if(SEARCH){
+    const hay = [s.name, s.location, s.landlord, s.facility,
+                 (MODE==='internal'? s.customers.map(c=>c.n).join(' '):'')].join(' ').toLowerCase();
+    if(!hay.includes(SEARCH.toLowerCase())) return false;
+  }
+  return true;
+}
+function powerTag(s){
+  const map={live:'Power live',review:'Power in review',none:'No power path'};
+  return `<span class="tag power ${s.powerState}">${map[s.powerState]||'Power TBD'}</span>`;
+}
+function card(s){
+  const st = stageById(s.stage);
+  const vis = visibleUpdates(s);
+  const last = vis[0];
+  const isCustom = !!s.custom;
+  return `<div class="card ${st.card}" data-id="${s.id}">
+    <div class="edge"></div>
+    <div class="card-top">
+      <div><div class="name">${esc(s.name)}${isCustom?'<span class="added-tag">added</span>':''}</div><div class="loc">${esc(s.location)}</div></div>
+      <div class="mw-badge"><div class="n mono">${fmtMW(s.mw)}</div><div class="u">MW gross</div></div>
+    </div>
+    <div class="cust">${custPills(s)}</div>
+    <div class="foot">
+      ${powerTag(s)}
+      <span class="tag rfs">RFS ${esc(redact((s.rfs||'').split('·')[0].split('/')[0].trim()||'TBD', s))}</span>
+      <span class="tag">${esc(s.leaseType)}</span>
+    </div>
+    ${ last
+      ? `<div class="upd"><span class="d">${esc(last.date)}</span><span>${esc(redact(last.text, s))}</span></div>`
+      : `<div class="upd none">No updates yet — open to add one</div>` }
+  </div>`;
+}
+function renderStages(){
+  const sites = allSites().filter(passesFilter);
+  const host = $('#stages');
+  if(sites.length===0){
+    host.innerHTML = `<div class="empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <div>No sites match your filters.</div></div>`;
+    return;
+  }
+  const order = FILTER_STAGE==='all' ? STAGES : STAGES.filter(s=>s.id===FILTER_STAGE);
+  host.innerHTML = order.map(st=>{
+    const list = sites.filter(s=>s.stage===st.id);
+    if(list.length===0) return '';
+    const mw = list.reduce((a,s)=>a+s.mw,0);
+    return `<section class="stage">
+      <div class="stage-head">
+        <span class="bead" style="background:${st.color}"></span>
+        <h2>${st.name}</h2>
+        <span class="mw">${list.length} site${list.length>1?'s':''} · <b class="mono">${fmtMW(mw)} MW</b></span>
+        <span class="rule"></span>
+      </div>
+      <div class="grid">${list.map(card).join('')}</div>
+    </section>`;
+  }).join('');
+}
+
+function renderAll(){ renderKpis(); renderChips(); renderStages(); }
+
+/* =========================================================================
+   DRAWER (site detail + update log)
+   ========================================================================= */
+function field(label, value, opts={}){
+  if(opts.internalOnly && MODE==='external'){
+    return `<div class="row"><dt>${label}</dt><dd class="hidden-ext">🔒 Internal only</dd></div>`;
+  }
+  return `<div class="row"><dt>${label}</dt><dd>${value}</dd></div>`;
+}
+function openDrawer(id){
+  const s = allSites().find(x=>x.id===id); if(!s) return;
+  openSiteId = id;
+  const st = stageById(s.stage);
+  const mwLabel = s.mwLabel || (fmtMW(s.mw)+' MW');
+  const totalCust = s.customers.reduce((a,c)=>a+(c.mw||0),0);
+
+  const stageOpts = STAGES.map(o=>`<option value="${o.id}" ${o.id===s.stage?'selected':''}>${o.name}</option>`).join('');
+
+  const detail = `
+    <div class="sec-t">Funnel stage</div>
+    <select class="stage-select" id="stage-select">${stageOpts}</select>
+
+    <div class="sec-t">Capacity & customers</div>
+    <dl class="dl">
+      ${field('Gross capacity', `<span class="mono">${esc(mwLabel)}</span>`)}
+      ${field('Customers', `<div class="cust-line">${custPills(s)}</div>`)}
+      ${field('Allocated', `<span class="mono">${fmtMW(totalCust)} MW</span>`)}
+    </dl>
+
+    <div class="sec-t">Site & commercial</div>
+    <dl class="dl">
+      ${field('Facility type', esc(s.facility))}
+      ${field('Head lease / site status', esc(s.headLease))}
+      ${field('Landlord', esc(s.landlord))}
+      ${field('Potential to purchase', esc(s.purchase))}
+      ${field('Lease terms', esc(s.leaseTerms))}
+      ${field('Operating / finance', esc(s.leaseType))}
+    </dl>
+
+    <div class="sec-t">Timeline & power</div>
+    <dl class="dl">
+      ${field('Target RFS', esc(redact(s.rfs, s)))}
+      ${field('Target deal execution', esc(redact(s.dealExec, s)))}
+      ${field('Power status', esc(s.power))}
+      ${field('Internal comments', esc(s.comments), {internalOnly:true})}
+    </dl>
+
+    <div class="sec-t">Update log${MODE==='external'?' (shared updates only)':''}</div>
+    <div class="add-upd">
+      <textarea id="upd-text" placeholder="What changed? e.g. 'Power award confirmed at 50 MW' …"></textarea>
+      <div class="au-row">
+        <input type="date" id="upd-date" value="${new Date().toISOString().slice(0,10)}">
+        <label><input type="checkbox" id="upd-internal" checked> Internal only</label>
+        <button class="save" id="upd-save">Log update</button>
+      </div>
+    </div>
+    <div class="timeline" id="timeline"></div>
+  `;
+
+  $('#drawer').innerHTML = `
+    <div class="dh ${st.dh}">
+      <button class="close" id="drawer-close" aria-label="Close">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="stg">${st.name}</div>
+      <div class="nm">${esc(s.name)}</div>
+      <div class="lc">${esc(s.location)}</div>
+      <div class="hmw">
+        <div><div class="n mono">${fmtMW(s.mw)}<small> MW</small></div><div class="l">Gross</div></div>
+        <div><div class="n mono">${fmtMW(totalCust)}<small> MW</small></div><div class="l">Allocated</div></div>
+        <div><div class="n">${esc(redact((s.rfs||'').split('·')[0].split('/')[0].trim()||'TBD', s))}</div><div class="l">Next RFS</div></div>
+      </div>
+    </div>
+    <div class="dbody">${detail}</div>`;
+
+  renderTimeline(s);
+  $('#scrim').classList.add('open'); $('#drawer').classList.add('open');
+  $('#drawer-close').onclick = closeDrawer;
+  $('#stage-select').onchange = e => moveStage(s.id, e.target.value);
+  $('#upd-save').onclick = () => saveUpdate(s.id);
+}
+function renderTimeline(s){
+  const vis = visibleUpdates(s);
+  $('#timeline').innerHTML = vis.length
+    ? vis.map(u=>`<div class="tl-item ${u.auto?'auto':''}">
+        <div class="dt">${esc(u.date)}</div>
+        <div class="tx">${esc(redact(u.text, s))}</div>
+        <div class="meta">${u.internalOnly?'<span class="iflag">INTERNAL</span>':''}${u.auto?'<span>system</span>':''}</div>
+      </div>`).join('')
+    : `<div class="tl-empty">No updates to show in this view.</div>`;
+}
+function closeDrawer(){ openSiteId=null; $('#scrim').classList.remove('open'); $('#drawer').classList.remove('open'); }
+
+async function saveUpdate(id){
+  const text = $('#upd-text').value.trim(); if(!text){ toast('Add a short note first'); return; }
+  if(!supabase){ toast('Not connected to the database'); return; }
+  const date = $('#upd-date').value || today();
+  const internalOnly = $('#upd-internal').checked;
+  const btn = $('#upd-save'); btn.disabled = true;
+  const { data, error } = await supabase.from('updates')
+    .insert({ site_id:id, date, text, internal_only:internalOnly, auto:false }).select().single();
+  btn.disabled = false;
+  if(error){ console.error(error); toast('Could not save \u2014 check your connection'); return; }
+  (UPDATES[id] = UPDATES[id]||[]).push(rowToUpdate(data));
+  $('#upd-text').value='';
+  const s = allSites().find(x=>x.id===id);
+  renderTimeline(s); renderStages();
+  toast('Update logged');
+}
+async function moveStage(id, newStage){
+  const s = allSites().find(x=>x.id===id); const from = s.stage;
+  if(from===newStage) return;
+  if(!supabase){ toast('Not connected to the database'); return; }
+  const { error } = await supabase.from('sites').update({ stage:newStage }).eq('id', id);
+  if(error){ console.error(error); toast('Could not move site'); return; }
+  s.stage = newStage;
+  const note = { site_id:id, date:today(),
+    text:`Stage moved: ${stageById(from).name} → ${stageById(newStage).name}`, internal_only:false, auto:true };
+  const { data } = await supabase.from('updates').insert(note).select().single();
+  if(data){ (UPDATES[id]=UPDATES[id]||[]).push(rowToUpdate(data)); }
+  openDrawer(id); renderAll();
+  toast(`Moved to ${stageById(newStage).short}`);
+}
+
+/* =========================================================================
+   RECENT UPDATES (global feed)  — reuses drawer shell
+   ========================================================================= */
+function openRecentUpdates(){
+  const sites = allSites();
+  let feed = [];
+  sites.forEach(s=> visibleUpdates(s).forEach(u=> feed.push({...u, site:s.name, sid:s.id, stage:s.stage})));
+  feed.sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  feed = feed.slice(0,40);
+
+  const items = feed.length ? feed.map(u=>{
+    const st = stageById(u.stage);
+    const site = sites.find(x=>x.id===u.sid);
+    return `<div class="tl-item ${u.auto?'auto':''}">
+      <div class="dt">${esc(u.date)}</div>
+      <div class="tx"><b style="cursor:pointer;color:${st.color}" data-jump="${u.sid}">${esc(u.site)}</b> — ${esc(redact(u.text, site))}</div>
+      <div class="meta">${u.internalOnly?'<span class="iflag">INTERNAL</span>':''}${u.auto?'<span>system</span>':''}</div>
+    </div>`;
+  }).join('') : `<div class="tl-empty">No updates yet.</div>`;
+
+  $('#drawer').innerHTML = `
+    <div class="dh d-con">
+      <button class="close" id="drawer-close"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <div class="stg">Across all sites</div>
+      <div class="nm">Recent updates</div>
+      <div class="lc">${MODE==='external'?'Shared updates only':'Internal + shared'} · most recent first</div>
+    </div>
+    <div class="dbody"><div class="timeline">${items}</div></div>`;
+  $('#scrim').classList.add('open'); $('#drawer').classList.add('open');
+  $('#drawer-close').onclick = closeDrawer;
+  $('#drawer').querySelectorAll('[data-jump]').forEach(el=> el.onclick=()=>openDrawer(el.dataset.jump));
+}
+
+/* =========================================================================
+   ADD SITE MODAL
+   ========================================================================= */
+function openAddSite(){
+  $('#mf').innerHTML = `
+    <div class="two">
+      <div><label>Site name</label><input id="f-name" placeholder="e.g. Brampton 1"></div>
+      <div><label>Location</label><input id="f-loc" placeholder="City, Province"></div>
+    </div>
+    <div class="two">
+      <div><label>Province</label><select id="f-prov"><option>ON</option><option>BC</option><option>QC</option><option>SK</option><option>MB</option><option>AB</option><option>NS</option><option>Other</option></select></div>
+      <div><label>Gross MW</label><input id="f-mw" type="number" step="0.1" placeholder="e.g. 50"></div>
+    </div>
+    <div class="two">
+      <div><label>Funnel stage</label><select id="f-stage">${STAGES.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+      <div><label>Customer (optional)</label><input id="f-cust" placeholder="Leave blank for TBD"></div>
+    </div>
+    <label><input type="checkbox" id="f-conf" checked style="width:auto;display:inline;margin-right:6px">Customer name is confidential (mask in External view)</label>
+    <label>Facility type</label><input id="f-fac" placeholder="e.g. Greenfield / New Build">
+    <div class="two">
+      <div><label>Landlord</label><input id="f-land" placeholder="e.g. Bell"></div>
+      <div><label>Target RFS</label><input id="f-rfs" placeholder="e.g. Q3 2027"></div>
+    </div>
+    <label>Power status</label><input id="f-power" placeholder="e.g. Under review with BC Hydro">
+    <label>Internal comments</label><textarea id="f-comments" rows="2" placeholder="Notes visible to internal only"></textarea>`;
+  $('#modal-scrim').classList.add('open');
+}
+async function createSite(){
+  const name = $('#f-name').value.trim(); if(!name){ toast('Give the site a name'); return; }
+  const mw = parseFloat($('#f-mw').value)||0;
+  const custName = $('#f-cust').value.trim();
+  const site = {
+    id:'custom-'+Date.now(), stage:$('#f-stage').value, name, location:$('#f-loc').value.trim()||'—',
+    prov:$('#f-prov').value, mw, confidential:$('#f-conf').checked,
+    customers:[{n:custName||null, mw:mw||0}],
+    facility:$('#f-fac').value.trim()||'TBD', headLease:'TBD', landlord:$('#f-land').value.trim()||'TBD',
+    purchase:'TBD', leaseTerms:'TBD', leaseType:'Operating', rfs:$('#f-rfs').value.trim()||'TBD',
+    dealExec:'TBD', power:$('#f-power').value.trim()||'TBD', powerState:'review',
+    comments:$('#f-comments').value.trim()||'—'
+  };
+  site.custom = true;
+  site.sort = 900 + (SITES.filter(x=>x.custom).length);
+  if(!supabase){ toast('Not connected to the database'); return; }
+  const btn = $('#modal-create'); btn.disabled = true;
+  const { error } = await supabase.from('sites').insert(siteToRow(site));
+  btn.disabled = false;
+  if(error){ console.error(error); toast('Could not add site \u2014 check your connection'); return; }
+  SITES.push(site); UPDATES[site.id] = [];
+  $('#modal-scrim').classList.remove('open');
+  renderAll(); toast('Site added to pipeline');
+}
+
+/* =========================================================================
+   MODE SWITCH
+   ========================================================================= */
+function setMode(m){
+  MODE = m;
+  document.body.className = m;
+  $('#mode').querySelectorAll('button').forEach(b=>{
+    const on = b.dataset.mode===m;
+    b.classList.toggle('active', on);
+    b.classList.toggle('ext', on && m==='external');
+  });
+  renderAll();
+  if(openSiteId) openDrawer(openSiteId);
+}
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+async function loadData(){
+  const { data:srows, error:se } = await supabase.from('sites').select('*').order('sort',{ascending:true});
+  if(se) throw se;
+  if(!srows || srows.length===0){
+    await seedDatabase();
+    const { data:s2 } = await supabase.from('sites').select('*').order('sort',{ascending:true});
+    SITES = (s2||[]).map(rowToSite);
+  } else {
+    SITES = srows.map(rowToSite);
+  }
+  const { data:urows } = await supabase.from('updates').select('*');
+  UPDATES = {};
+  (urows||[]).forEach(r=>{ (UPDATES[r.site_id]=UPDATES[r.site_id]||[]).push(rowToUpdate(r)); });
+}
+async function seedDatabase(){
+  const siteRows = SEED.map((s,i)=> siteToRow({...s, custom:false, sort:i}));
+  await supabase.from('sites').upsert(siteRows, { onConflict:'id', ignoreDuplicates:true });
+  const updRows = [];
+  SEED.forEach(s=> (s.updates||[]).forEach(u=> updRows.push(
+    { site_id:s.id, date:u.date, text:u.text, internal_only:!!u.internalOnly, auto:false })));
+  if(updRows.length) await supabase.from('updates').insert(updRows);
+}
+let reloadTimer = null;
+function reloadSoft(){
+  clearTimeout(reloadTimer);
+  reloadTimer = setTimeout(async ()=>{
+    try{ await loadData(); renderAll();
+      if(openSiteId){ const s = allSites().find(x=>x.id===openSiteId); if(s) renderTimeline(s); }
+    }catch(e){ console.warn('reload failed', e); }
+  }, 400);
+}
+function subscribeRealtime(){
+  supabase.channel('pipeline-live')
+    .on('postgres_changes', { event:'*', schema:'public', table:'sites' },   reloadSoft)
+    .on('postgres_changes', { event:'*', schema:'public', table:'updates' }, reloadSoft)
+    .subscribe();
+}
+function banner(html, kind){
+  let el = document.getElementById('app-banner');
+  if(!el){ el = document.createElement('div'); el.id='app-banner';
+    el.style.cssText='margin:0 0 18px;padding:14px 16px;border-radius:12px;font-size:13.5px;line-height:1.5';
+    const wrap=document.querySelector('.wrap'); wrap.insertBefore(el, wrap.firstChild); }
+  el.style.background = kind==='error' ? '#FBE7E7' : '#FFF6E8';
+  el.style.border = '1px solid ' + (kind==='error' ? '#E7B4B4' : '#F0D29A');
+  el.style.color = kind==='error' ? '#7A2E2E' : '#7A551A';
+  el.innerHTML = html;
+}
+function wire(){
+  $('#mode').addEventListener('click', e=>{ const b=e.target.closest('button[data-mode]'); if(b) setMode(b.dataset.mode); });
+  $('#chips').addEventListener('click', e=>{ const b=e.target.closest('button[data-stage]'); if(b){ FILTER_STAGE=b.dataset.stage; renderChips(); renderStages(); } });
+  $('#search').addEventListener('input', e=>{ SEARCH=e.target.value; renderStages(); });
+  $('#prov').addEventListener('change', e=>{ PROV=e.target.value; renderStages(); });
+  $('#stages').addEventListener('click', e=>{ const c=e.target.closest('.card[data-id]'); if(c) openDrawer(c.dataset.id); });
+  $('#scrim').addEventListener('click', closeDrawer);
+  $('#updates-btn').addEventListener('click', openRecentUpdates);
+  $('#add-site-btn').addEventListener('click', openAddSite);
+  $('#modal-cancel').addEventListener('click', ()=>$('#modal-scrim').classList.remove('open'));
+  $('#modal-scrim').addEventListener('click', e=>{ if(e.target.id==='modal-scrim') $('#modal-scrim').classList.remove('open'); });
+  $('#modal-create').addEventListener('click', createSite);
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeDrawer(); $('#modal-scrim').classList.remove('open'); } });
+}
+async function init(){
+  $('#asof-date').textContent = new Date().toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'});
+  wire();
+  setMode('internal');
+  if(!CONFIGURED){
+    banner('<b>Almost there.</b> Open <code>index.html</code> and paste your Supabase <b>Project URL</b> and <b>anon key</b> into the two lines near the top of the script, then reload. See <code>README.md</code> for the 4 steps.', 'warn');
+    return;
+  }
+  try{
+    await loadData();
+    renderAll();
+    subscribeRealtime();
+  }catch(e){
+    console.error(e);
+    banner('<b>Could not reach the database.</b> Double-check your Supabase URL and anon key, and that you ran <code>schema.sql</code>. Technical detail: '+ (e && e.message ? e.message : e), 'error');
+  }
+}
+init();
+</script>
+</body>
+</html>
