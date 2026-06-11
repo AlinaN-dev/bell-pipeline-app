@@ -1116,21 +1116,64 @@ async function saveEditedSite(id){
   renderAll();
 }
 function exportCSV(){
-  const cols = ['Name','Location','Province','Stage','Gross MW','Customers','Allocated MW','RFS','Deal Exec','Facility','Landlord','Purchase','Lease Type','Power Status','Power State'];
   const stageNames = {ops:'In Operations',con:'Under Construction & Contracted',near:'Near Term Execution',mid:'Mid Term / Exploratory'};
-  const rows = allSites().map(s=>{
+  const cols = ['Name','Location','Province','Stage','Gross MW','Customers','Allocated MW','RFS','Deal Exec','Facility','Landlord','Purchase','Lease Type','Power Status','Power State'];
+  const colWidths = [140,130,60,170,60,160,80,110,110,210,120,80,90,210,80];
+  const x = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  let hdrCells = cols.map(c=>`<Cell ss:StyleID="hdr"><Data ss:Type="String">${x(c)}</Data></Cell>`).join('');
+  let dataRows = allSites().map((s,i)=>{
     const custNames = s.customers.map(c=> MODE==='external' && s.confidential ? 'Confidential' : (c.n||'TBD')).join('; ');
     const allocMW = s.customers.reduce((a,c)=>a+(c.mw||0),0);
-    return [s.name, s.location, s.prov, stageNames[s.stage]||s.stage, s.mw, custNames, allocMW,
-            s.rfs, s.dealExec, s.facility, s.landlord, s.purchase, s.leaseType, s.power, s.powerState]
-      .map(v=> '"'+(String(v==null?'':v).replace(/"/g,'""'))+'"').join(',');
-  });
-  const csv = [cols.map(c=>'"'+c+'"').join(','), ...rows].join('\r\n');
+    const sid = i%2===0 ? 'even' : 'odd';
+    const vals = [s.name, s.location, s.prov, stageNames[s.stage]||s.stage, s.mw, custNames, allocMW,
+                  s.rfs, s.dealExec, s.facility, s.landlord, s.purchase, s.leaseType, s.power, s.powerState];
+    const cells = vals.map((v,ci)=>{
+      const num = ci===4||ci===6;
+      return `<Cell ss:StyleID="${sid}"><Data ss:Type="${num?'Number':'String'}">${num?(Number(v)||0):x(String(v==null?'':v))}</Data></Cell>`;
+    }).join('');
+    return `<Row ss:Height="18">${cells}</Row>`;
+  }).join('');
+
+  const colDefs = colWidths.map(w=>`<Column ss:Width="${w}"/>`).join('');
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:x="urn:schemas-microsoft-com:office:excel">
+  <Styles>
+    <Style ss:ID="hdr">
+      <Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="11"/>
+      <Interior ss:Color="#004990" ss:Pattern="Solid"/>
+      <Alignment ss:Vertical="Center" ss:Horizontal="Center" ss:WrapText="0"/>
+    </Style>
+    <Style ss:ID="even">
+      <Interior ss:Color="#EEF3FA" ss:Pattern="Solid"/>
+      <Alignment ss:Vertical="Center"/>
+      <Font ss:Size="10"/>
+    </Style>
+    <Style ss:ID="odd">
+      <Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/>
+      <Alignment ss:Vertical="Center"/>
+      <Font ss:Size="10"/>
+    </Style>
+  </Styles>
+  <Worksheet ss:Name="DC Pipeline">
+    <Table>${colDefs}<Row ss:Height="22">${hdrCells}</Row>${dataRows}</Table>
+    <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+      <FreezePanes/><FrozenNoSplit/>
+      <SplitHorizontal>1</SplitHorizontal>
+      <TopRowBottomPane>1</TopRowBottomPane>
+      <ActivePane>2</ActivePane>
+    </WorksheetOptions>
+    <x:AutoFilter x:Range="R1C1:R1C${cols.length}"/>
+  </Worksheet>
+</Workbook>`;
+
   const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  a.download = 'bell-ai-pipeline-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.href = 'data:application/vnd.ms-excel;charset=utf-8,'+encodeURIComponent(xml);
+  a.download = 'bell-ai-pipeline-'+new Date().toISOString().slice(0,10)+'.xls';
   a.click();
-  toast('CSV downloaded');
+  toast('Excel file downloaded');
 }
 async function init(){
   $('#asof-date').textContent = new Date().toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'});
