@@ -1024,7 +1024,11 @@ async function createSite(){
   const { error } = await supabase.from('sites').insert(siteToRow(site));
   btn.disabled = false;
   if(error){ console.error(error); toast('Could not add site \u2014 check your connection'); return; }
-  SITES.push(site); UPDATES[site.id] = [];
+  UPDATES[site.id] = [];
+  const addNote = { site_id:site.id, date:today(), text:`Site added to pipeline: ${site.name} (${fmtMW(site.mw)} MW, ${stageById(site.stage).name}).`, internal_only:false, auto:true };
+  const { data:an } = await supabase.from('updates').insert(addNote).select().single();
+  if(an){ UPDATES[site.id].push(rowToUpdate(an)); }
+  SITES.push(site);
   $('#modal-scrim').classList.remove('open');
   renderAll(); toast('Site added to pipeline');
 }
@@ -1188,7 +1192,15 @@ async function saveEditedSite(id){
     headLease:updates.head_lease, landlord:updates.landlord, purchase:updates.purchase,
     rfs:updates.rfs, dealExec:updates.deal_exec, power:updates.power, powerState:updates.power_state,
     comments:updates.comments });
-  const autoNote = { site_id:id, date:today(), text:'Site details updated.', internal_only:false, auto:true };
+  const changes = [];
+  if(updates.name!==s.name) changes.push(`Name → ${updates.name}`);
+  if(updates.mw!==s.mw) changes.push(`MW → ${fmtMW(updates.mw)}`);
+  if(updates.rfs!==s.rfs) changes.push(`RFS → ${updates.rfs}`);
+  if(updates.power_state!==s.powerState) changes.push(`Power state → ${updates.power_state}`);
+  if(updates.power!==s.power) changes.push(`Power → ${updates.power}`);
+  if(updates.deal_exec!==s.dealExec) changes.push(`Deal exec → ${updates.deal_exec}`);
+  const noteText = changes.length ? `Site details updated: ${changes.join(' · ')}.` : 'Site details updated.';
+  const autoNote = { site_id:id, date:today(), text:noteText, internal_only:false, auto:true };
   const { data:nd } = await supabase.from('updates').insert(autoNote).select().single();
   if(nd){ (UPDATES[id]=UPDATES[id]||[]).push(rowToUpdate(nd)); }
   toast('Site updated');
