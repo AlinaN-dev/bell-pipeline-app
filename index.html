@@ -1188,6 +1188,9 @@ async function saveEditedSite(id){
     headLease:updates.head_lease, landlord:updates.landlord, purchase:updates.purchase,
     rfs:updates.rfs, dealExec:updates.deal_exec, power:updates.power, powerState:updates.power_state,
     comments:updates.comments });
+  const autoNote = { site_id:id, date:today(), text:'Site details updated.', internal_only:false, auto:true };
+  const { data:nd } = await supabase.from('updates').insert(autoNote).select().single();
+  if(nd){ (UPDATES[id]=UPDATES[id]||[]).push(rowToUpdate(nd)); }
   toast('Site updated');
   openDrawer(id);
   renderAll();
@@ -1250,7 +1253,13 @@ function openExecView(){
   }).join('');
 
   $('#exec-body').innerHTML = kpis + cardSections +
-    `<hr class="exec-divider"><div style="font-size:13px;font-weight:700;margin-bottom:12px">All sites — detailed view</div>
+    `<hr class="exec-divider"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700">All sites — detailed view</div>
+      <button onclick="exportCSV()" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export to Excel
+      </button>
+    </div>
     <div class="exec-table-wrap"><table class="exec-table">${thead}<tbody>${tbody}</tbody></table></div>`;
   $('#exec-date').textContent = 'As of '+new Date().toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'});
   $('#exec-scrim').classList.add('open');
