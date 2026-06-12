@@ -985,7 +985,6 @@ function renderTimeline(s){
           <div class="meta">
             ${author?`<span class="author">${esc(author)}</span>`:''}
             ${u.internalOnly?'<span class="iflag">INTERNAL</span>':''}
-            ${u.auto?'<span>system</span>':''}
           </div>
         </div>`;
       }).join('')
@@ -1044,7 +1043,6 @@ function openRecentUpdates(){
       <div class="meta">
         ${author?`<span class="author">${esc(author)}</span>`:''}
         ${u.internalOnly?'<span class="iflag">INTERNAL</span>':''}
-        ${u.auto?'<span>system</span>':''}
       </div>
     </div>`;
   }).join('') : `<div class="tl-empty">No updates yet.</div>`;
@@ -1273,13 +1271,7 @@ async function saveEditedSite(id){
     comments:$('#ef-comments').value.trim(),
   };
   const btn = $('#save-edit-btn'); btn.disabled=true; btn.textContent='Saving…';
-  const { error } = await supabase.from('sites').update(updates).eq('id', id);
-  if(error){ console.error(error); toast('Could not save — check your connection'); btn.disabled=false; btn.textContent='Save changes'; return; }
-  Object.assign(s, { name:updates.name, location:updates.location, prov:updates.prov, mw:updates.mw,
-    customers:updates.customers, confidential:updates.confidential, facility:updates.facility,
-    headLease:updates.head_lease, landlord:updates.landlord, purchase:updates.purchase,
-    rfs:updates.rfs, dealExec:updates.deal_exec, power:updates.power, powerState:updates.power_state,
-    comments:updates.comments });
+  // capture diffs BEFORE updating s
   const diff = (label, oldVal, newVal) => {
     const o = String(oldVal||'—').trim(); const n = String(newVal||'—').trim();
     if(o!==n) changes.push(`${label}: "${o}" → "${n}"`);
@@ -1298,6 +1290,13 @@ async function saveEditedSite(id){
   diff('Landlord',    s.landlord,    updates.landlord);
   diff('Purchase',    s.purchase,    updates.purchase);
   diff('Comments',    s.comments,    updates.comments);
+  const { error } = await supabase.from('sites').update(updates).eq('id', id);
+  if(error){ console.error(error); toast('Could not save — check your connection'); btn.disabled=false; btn.textContent='Save changes'; return; }
+  Object.assign(s, { name:updates.name, location:updates.location, prov:updates.prov, mw:updates.mw,
+    customers:updates.customers, confidential:updates.confidential, facility:updates.facility,
+    headLease:updates.head_lease, landlord:updates.landlord, purchase:updates.purchase,
+    rfs:updates.rfs, dealExec:updates.deal_exec, power:updates.power, powerState:updates.power_state,
+    comments:updates.comments });
   const noteText = `${authorTag(getAuthor())}${changes.length ? `Site details updated: ${changes.join(' · ')}.` : 'Site details updated.'}`;
   const autoNote = { site_id:id, date:today(), text:noteText, internal_only:false, auto:true };
   const { data:nd } = await supabase.from('updates').insert(autoNote).select().single();
