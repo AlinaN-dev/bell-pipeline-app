@@ -345,9 +345,51 @@
     header.top{position:static} .scrim,.drawer,.modal-scrim,.controls .btn-add,.mode,.btn-ghost{display:none!important}
     .card{break-inside:avoid; box-shadow:none} body{background:#fff}
   }
+  /* ---------- Password overlay ---------- */
+  #pwd-overlay{
+    position:fixed; inset:0; z-index:9999;
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 60%,var(--navy-3) 100%);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .pwd-box{
+    background:#fff; border-radius:18px; padding:44px 40px 36px;
+    width:100%; max-width:400px; box-shadow:0 24px 64px rgba(0,0,0,.35);
+    display:flex; flex-direction:column; align-items:center; gap:0;
+  }
+  .pwd-box img{height:44px; margin-bottom:18px}
+  .pwd-box h2{margin:0 0 4px; font-size:18px; font-weight:700; color:var(--ink); text-align:center}
+  .pwd-box p{margin:0 0 24px; font-size:13px; color:var(--muted); text-align:center}
+  .pwd-field{
+    width:100%; padding:11px 14px; border:1.5px solid var(--line);
+    border-radius:8px; font-size:15px; font-family:inherit;
+    outline:none; transition:border .15s;
+  }
+  .pwd-field:focus{border-color:var(--blue)}
+  .pwd-btn{
+    margin-top:14px; width:100%; padding:12px;
+    background:var(--navy-3); color:#fff; border-radius:8px;
+    font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; border:none;
+    transition:background .15s;
+  }
+  .pwd-btn:hover{background:var(--blue)}
+  .pwd-err{
+    margin-top:10px; font-size:13px; color:#c0392b;
+    display:none; text-align:center;
+  }
 </style>
 </head>
 <body class="internal">
+
+<div id="pwd-overlay">
+  <div class="pwd-box">
+    <img src="Picture1.jpg" alt="Bell AI Fabric" onerror="this.style.display='none'">
+    <h2>Bell AI Fabric</h2>
+    <p>DC Pipeline Tracker — enter the access password to continue</p>
+    <input id="pwd-input" class="pwd-field" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="pwd-btn" id="pwd-btn">Continue</button>
+    <div class="pwd-err" id="pwd-err">Incorrect password. Please try again.</div>
+  </div>
+</div>
 
 <header class="top">
   <div class="top-row">
@@ -1511,7 +1553,40 @@ async function init(){
     banner('<b>Could not reach the database.</b> Double-check your Supabase URL and anon key, and that you ran <code>schema.sql</code>. Technical detail: '+ (e && e.message ? e.message : e), 'error');
   }
 }
-init();
+// ---------- Password gate ----------
+const _pk = [66,101,108,108,67,64,110,97,100,97,49,56,56,48,33]; // encoded
+let _ph = null;
+(async()=>{
+  const buf = await crypto.subtle.digest('SHA-256', new Uint8Array(_pk));
+  _ph = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+})();
+
+async function _hashStr(s){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPwd(){
+  const v = document.getElementById('pwd-input').value;
+  const h = await _hashStr(v);
+  if(h === _ph){
+    sessionStorage.setItem('_bpa','1');
+    document.getElementById('pwd-overlay').remove();
+    init();
+  } else {
+    document.getElementById('pwd-err').style.display='block';
+    document.getElementById('pwd-input').value='';
+    document.getElementById('pwd-input').focus();
+  }
+}
+
+document.getElementById('pwd-btn').addEventListener('click', checkPwd);
+document.getElementById('pwd-input').addEventListener('keydown', e=>{ if(e.key==='Enter') checkPwd(); });
+
+if(sessionStorage.getItem('_bpa')==='1'){
+  document.getElementById('pwd-overlay').remove();
+  init();
+}
 </script>
 </body>
 </html>
