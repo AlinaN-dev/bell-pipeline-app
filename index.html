@@ -512,7 +512,7 @@ function siteToRow(s){
     power:s.power, power_state:s.powerState, comments:s.comments,
     custom:(s.custom===true), sort:(s.sort==null?500:s.sort) };
 }
-function rowToUpdate(r){ return { id:r.id, date:r.date, text:r.text, internalOnly:!!r.internal_only, auto:!!r.auto }; }
+function rowToUpdate(r){ return { id:r.id, date:r.date, text:r.text, internalOnly:!!r.internal_only, auto:!!r.auto, createdAt:r.created_at||'' }; }
 
 /* =========================================================================
    STAGE DEFINITIONS  (the funnel)
@@ -725,7 +725,13 @@ const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'
 const fmtMW = n => (Number.isInteger(n)? n : n.toFixed(1));
 function allSites(){ return SITES; }
 function siteUpdates(s){
-  return (UPDATES[s.id]||[]).slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  return (UPDATES[s.id]||[]).slice().sort((a,b)=> (b.createdAt||b.date||'').localeCompare(a.createdAt||a.date||''));
+}
+function fmtDateTime(u){
+  if(!u.createdAt) return esc(u.date||'');
+  const d = new Date(u.createdAt);
+  return d.toLocaleDateString('en-CA',{year:'numeric',month:'short',day:'numeric'})
+    + ' · ' + d.toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit',hour12:false});
 }
 function visibleUpdates(s){ return siteUpdates(s).filter(u=> MODE==='internal' || !u.internalOnly); }
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
@@ -980,7 +986,7 @@ function renderTimeline(s){
     ? vis.map(u=>{
         const {author, text} = parseAuthor(u.text);
         return `<div class="tl-item ${u.auto?'auto':''}">
-          <div class="dt">${esc(u.date)}</div>
+          <div class="dt">${fmtDateTime(u)}</div>
           <div class="tx">${esc(redact(text, s))}</div>
           <div class="meta">
             ${author?`<span class="author">${esc(author)}</span>`:''}
@@ -1038,7 +1044,7 @@ function openRecentUpdates(){
     const site = sites.find(x=>x.id===u.sid);
     const {author, text:utext} = parseAuthor(u.text);
     return `<div class="tl-item ${u.auto?'auto':''}">
-      <div class="dt">${esc(u.date)}</div>
+      <div class="dt">${fmtDateTime(u)}</div>
       <div class="tx"><b style="cursor:pointer;color:${st.color}" data-jump="${u.sid}">${esc(u.site)}</b> — ${esc(redact(utext, site))}</div>
       <div class="meta">
         ${author?`<span class="author">${esc(author)}</span>`:''}
@@ -1144,7 +1150,7 @@ async function loadData(){
   } else {
     SITES = srows.map(rowToSite);
   }
-  const { data:urows } = await supabase.from('updates').select('*');
+  const { data:urows } = await supabase.from('updates').select('*').order('created_at', {ascending:false});
   UPDATES = {};
   (urows||[]).forEach(r=>{ (UPDATES[r.site_id]=UPDATES[r.site_id]||[]).push(rowToUpdate(r)); });
 }
