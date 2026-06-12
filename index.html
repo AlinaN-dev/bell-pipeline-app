@@ -1280,15 +1280,24 @@ async function saveEditedSite(id){
     headLease:updates.head_lease, landlord:updates.landlord, purchase:updates.purchase,
     rfs:updates.rfs, dealExec:updates.deal_exec, power:updates.power, powerState:updates.power_state,
     comments:updates.comments });
+  const diff = (label, oldVal, newVal) => {
+    const o = String(oldVal||'—').trim(); const n = String(newVal||'—').trim();
+    if(o!==n) changes.push(`${label}: "${o}" → "${n}"`);
+  };
   const changes = [];
-  if(updates.name!==s.name) changes.push(`Name: "${s.name}" → "${updates.name}"`);
+  diff('Name',        s.name,        updates.name);
+  diff('Location',    s.location,    updates.location);
+  diff('Province',    s.prov,        updates.prov);
   if(updates.mw!==s.mw) changes.push(`MW: ${fmtMW(s.mw)} → ${fmtMW(updates.mw)}`);
-  if(updates.rfs!==s.rfs) changes.push(`RFS: "${s.rfs||'—'}" → "${updates.rfs}"`);
-  if(updates.power_state!==s.powerState) changes.push(`Power state: ${s.powerState} → ${updates.power_state}`);
-  if(updates.power!==s.power) changes.push(`Power: "${s.power||'—'}" → "${updates.power}"`);
-  if(updates.deal_exec!==s.dealExec) changes.push(`Deal exec: "${s.dealExec||'—'}" → "${updates.deal_exec}"`);
-  if(updates.head_lease!==s.headLease) changes.push(`Head lease: "${s.headLease||'—'}" → "${updates.head_lease}"`);
-  if(updates.landlord!==s.landlord) changes.push(`Landlord: "${s.landlord||'—'}" → "${updates.landlord}"`);
+  diff('RFS',         s.rfs,         updates.rfs);
+  diff('Deal exec',   s.dealExec,    updates.deal_exec);
+  diff('Power',       s.power,       updates.power);
+  diff('Power state', s.powerState,  updates.power_state);
+  diff('Facility',    s.facility,    updates.facility);
+  diff('Head lease',  s.headLease,   updates.head_lease);
+  diff('Landlord',    s.landlord,    updates.landlord);
+  diff('Purchase',    s.purchase,    updates.purchase);
+  diff('Comments',    s.comments,    updates.comments);
   const noteText = `${authorTag(getAuthor())}${changes.length ? `Site details updated: ${changes.join(' · ')}.` : 'Site details updated.'}`;
   const autoNote = { site_id:id, date:today(), text:noteText, internal_only:false, auto:true };
   const { data:nd } = await supabase.from('updates').insert(autoNote).select().single();
@@ -1320,15 +1329,24 @@ async function loadDocs(siteId){
 async function uploadDocs(siteId, files){
   if(!files||!files.length) return;
   const btn = $('#doc-upload-btn'); btn.textContent = 'Uploading…'; btn.disabled = true;
+  const uploaded = [];
   for(const file of files){
     const path = `${siteId}/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from('site-docs').upload(path, file, {upsert:false});
-    if(error){ toast('Upload failed: '+error.message); }
+    if(error){ toast('Upload failed: '+error.message); } else { uploaded.push(file.name); }
   }
   btn.textContent = 'Attach a file'; btn.disabled = false;
   $('#doc-file-input').value = '';
+  if(uploaded.length){
+    const noteText = `${authorTag(getAuthor())}Document${uploaded.length>1?'s':''} attached: ${uploaded.join(', ')}.`;
+    const { data:nd } = await supabase.from('updates').insert({ site_id:siteId, date:today(), text:noteText, internal_only:false, auto:true }).select().single();
+    if(nd){ (UPDATES[siteId]=UPDATES[siteId]||[]).push(rowToUpdate(nd)); }
+    const s = allSites().find(x=>x.id===siteId);
+    if(s) renderTimeline(s);
+    renderStages();
+  }
   await loadDocs(siteId);
-  toast(files.length===1 ? '1 file attached' : `${files.length} files attached`);
+  toast(uploaded.length===1 ? '1 file attached' : `${uploaded.length} files attached`);
 }
 
 async function deleteDoc(siteId, path){
