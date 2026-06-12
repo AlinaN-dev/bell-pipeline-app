@@ -1281,12 +1281,14 @@ async function saveEditedSite(id){
     rfs:updates.rfs, dealExec:updates.deal_exec, power:updates.power, powerState:updates.power_state,
     comments:updates.comments });
   const changes = [];
-  if(updates.name!==s.name) changes.push(`Name → ${updates.name}`);
-  if(updates.mw!==s.mw) changes.push(`MW → ${fmtMW(updates.mw)}`);
-  if(updates.rfs!==s.rfs) changes.push(`RFS → ${updates.rfs}`);
-  if(updates.power_state!==s.powerState) changes.push(`Power state → ${updates.power_state}`);
-  if(updates.power!==s.power) changes.push(`Power → ${updates.power}`);
-  if(updates.deal_exec!==s.dealExec) changes.push(`Deal exec → ${updates.deal_exec}`);
+  if(updates.name!==s.name) changes.push(`Name: "${s.name}" → "${updates.name}"`);
+  if(updates.mw!==s.mw) changes.push(`MW: ${fmtMW(s.mw)} → ${fmtMW(updates.mw)}`);
+  if(updates.rfs!==s.rfs) changes.push(`RFS: "${s.rfs||'—'}" → "${updates.rfs}"`);
+  if(updates.power_state!==s.powerState) changes.push(`Power state: ${s.powerState} → ${updates.power_state}`);
+  if(updates.power!==s.power) changes.push(`Power: "${s.power||'—'}" → "${updates.power}"`);
+  if(updates.deal_exec!==s.dealExec) changes.push(`Deal exec: "${s.dealExec||'—'}" → "${updates.deal_exec}"`);
+  if(updates.head_lease!==s.headLease) changes.push(`Head lease: "${s.headLease||'—'}" → "${updates.head_lease}"`);
+  if(updates.landlord!==s.landlord) changes.push(`Landlord: "${s.landlord||'—'}" → "${updates.landlord}"`);
   const noteText = `${authorTag(getAuthor())}${changes.length ? `Site details updated: ${changes.join(' · ')}.` : 'Site details updated.'}`;
   const autoNote = { site_id:id, date:today(), text:noteText, internal_only:false, auto:true };
   const { data:nd } = await supabase.from('updates').insert(autoNote).select().single();
