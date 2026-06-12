@@ -772,7 +772,11 @@ function siteUpdates(s){
 }
 function fmtDateTime(u){
   if(!u.createdAt) return esc(u.date||'');
-  const d = new Date(u.createdAt);
+  // Normalize to UTC: Supabase may return "2026-06-12 02:30:00+00" without T or trailing Z
+  let raw = u.createdAt.trim();
+  if(!raw.endsWith('Z') && !raw.match(/[+-]\d{2}:?\d{2}$/)) raw += 'Z';
+  raw = raw.replace(' ','T');
+  const d = new Date(raw);
   return d.toLocaleDateString('en-CA',{timeZone:TZ,year:'numeric',month:'short',day:'numeric'})
     + ' · ' + d.toLocaleTimeString('en-CA',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hour12:false});
 }
